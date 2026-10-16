@@ -58,7 +58,8 @@ List<Marker> buildMarkers(
 /// URL that opens turn-by-turn directions to [destination] in an external
 /// maps app, starting from the device's current location.
 Uri directionsUri(LatLng destination) {
-  // TODO(dainguyen): pick the directions provider / travel mode (see chat).
+  // Google Maps URL on every platform: opens the Google Maps app when
+  // installed, otherwise the browser.
   return Uri.https('www.google.com', '/maps/dir/', {
     'api': '1',
     'destination': '${destination.latitude},${destination.longitude}',

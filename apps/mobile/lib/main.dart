@@ -62,32 +62,63 @@ Future<void> initializeNotification() async {
       ?.requestNotificationsPermission();
 }
 
+/// Listener on the current user's `follow` docs.
+StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _followSubscription;
+
+/// One `stories` listener per followed user, keyed by their uid.
+final Map<String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
+_storySubscriptions = {};
+
 void registerNotification() {
   FirebaseAuth.instance.authStateChanges().listen(
     registerNotificationForCurrentUser,
   );
 }
 
+/// Drops every listener belonging to the previous user (logout / switch).
+void _cancelAllNotificationListeners() {
+  _followSubscription?.cancel();
+  _followSubscription = null;
+  for (final sub in _storySubscriptions.values) {
+    sub.cancel();
+  }
+  _storySubscriptions.clear();
+}
+
 void registerNotificationForCurrentUser(User? user) {
   debugPrint('register current user');
+  _cancelAllNotificationListeners();
   if (user == null) return;
-  FirebaseFirestore.instance
+  _followSubscription = FirebaseFirestore.instance
       .collection(followCollectionPath)
       .where('follower', isEqualTo: user.uid)
       .snapshots()
       .listen((event) {
-        List<String> followingUid = event.docs
+        final Set<String> followingUid = event.docs
             .map((e) => e['target'].toString())
-            .toList();
-        for (String uid in followingUid) {
-          registerSingleUserNotification(uid);
+            .toSet();
+
+        /// Unfollowed users: stop listening to their stories.
+        _storySubscriptions.removeWhere((uid, sub) {
+          if (followingUid.contains(uid)) return false;
+          sub.cancel();
+          return true;
+        });
+
+        /// Newly followed users: start listening. Existing ones are kept as is.
+        for (final uid in followingUid) {
+          _storySubscriptions.putIfAbsent(
+            uid,
+            () => registerSingleUserNotification(uid),
+          );
         }
       });
 }
 
-void registerSingleUserNotification(String targetUid) {
+StreamSubscription<QuerySnapshot<Map<String, dynamic>>>
+registerSingleUserNotification(String targetUid) {
   int numPreviousStories = -1;
-  FirebaseFirestore.instance
+  return FirebaseFirestore.instance
       .collection(storiesCollectionPath)
       .where('owner', isEqualTo: targetUid)
       .snapshots()
