@@ -10,11 +10,12 @@ class StoryPage extends StatelessWidget {
   final String storyDescription;
 
   StoryPage({
-    this.storyImage,
-    this.storyTitle,
-    this.storyTime,
-    this.storyType,
-    this.storyDescription,
+    super.key,
+    required this.storyImage,
+    required this.storyTitle,
+    required this.storyTime,
+    required this.storyType,
+    required this.storyDescription,
   });
 
   @override
@@ -48,10 +49,7 @@ class StoryPage extends StatelessWidget {
                   storyTitle,
                   textAlign: TextAlign.left,
                   maxLines: 2,
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 10),
                 Text(
@@ -102,11 +100,13 @@ class StoryPage extends StatelessWidget {
                   constraints: BoxConstraints(minHeight: 50),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(5)),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
                   textStyle: TextStyle(
-                      fontFamily: 'OpenSans',
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600),
+                    fontFamily: 'OpenSans',
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                   child: Text('DONE'),
                 ),
                 SizedBox(height: 30),

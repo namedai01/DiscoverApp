@@ -14,15 +14,16 @@ class MainCard extends StatefulWidget {
 
   //Importing datas from json via explore_page.dart
   MainCard({
-    this.imagePath,
-    this.venueName,
-    this.venueLocation,
-    this.description,
-    this.locationID,
+    super.key,
+    required this.imagePath,
+    required this.venueName,
+    required this.venueLocation,
+    required this.description,
+    required this.locationID,
   });
 
   @override
-  _MainCardState createState() => _MainCardState();
+  State<MainCard> createState() => _MainCardState();
 }
 
 class _MainCardState extends State<MainCard> {
@@ -61,7 +62,7 @@ class _MainCardState extends State<MainCard> {
               image: NetworkImage(widget.imagePath),
               fit: BoxFit.cover,
               colorFilter: ColorFilter.mode(
-                Colors.black.withOpacity(0.2),
+                Colors.black.withValues(alpha: 0.2),
                 BlendMode.multiply,
               ),
             ),

@@ -8,6 +8,8 @@ import '../logic/search_results.dart';
 import '../components/page_heading.dart';
 
 class ExplorePage extends StatefulWidget {
+  const ExplorePage({super.key});
+
   @override
   State<StatefulWidget> createState() {
     return _ExplorePageState();
@@ -30,18 +32,19 @@ class _ExplorePageState extends State<ExplorePage> {
       initialData: '',
       stream: bloc.recieveSearchVal,
       builder: (BuildContext context, AsyncSnapshot searchSnapshot) {
-        String searchVal = searchSnapshot.data;
+        String? searchVal = searchSnapshot.data;
         return ListView(
           //Contains the whole Page. Its a ListView but given height to
           //fix it on the Screen.
           physics: NeverScrollableScrollPhysics(),
           padding: EdgeInsets.only(
-              top: 0), //Remove default padding provided by ListView.
+            top: 0,
+          ), //Remove default padding provided by ListView.
           children: <Widget>[
             pageHeader('Discover', 30),
             SizedBox(height: 20),
             Container(
-              child: SearchBar(),
+              child: const AppSearchBar(),
               padding: EdgeInsets.symmetric(horizontal: 30),
             ),
             SizedBox(height: 20),

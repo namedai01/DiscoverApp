@@ -8,24 +8,19 @@ class DetailsInfo extends StatelessWidget {
   final String description;
   final String locationID;
 
-  DetailsInfo({
-    this.description,
-    this.locationID,
-  });
+  DetailsInfo({super.key, required this.description, required this.locationID});
 
   final FirebaseFirestore locationsFSI = FirebaseFirestore.instance;
 
   //This Page shows Stiories of a specific Location from FireStore.
   @override
   Widget build(BuildContext context) {
-    double topSpace;
-    double bottomSpace;
+    double topSpace = 30;
+    double bottomSpace = 20;
 
     return Column(
       children: <Widget>[
-        SizedBox(
-          height: 100,
-        ),
+        SizedBox(height: 100),
         Container(
           padding: EdgeInsets.symmetric(horizontal: 35),
           height: MediaQuery.of(context).size.height - 100,
@@ -78,35 +73,47 @@ class DetailsInfo extends StatelessWidget {
                           ),
                         ),
                         SizedBox(height: topSpace),
-                        data[index] == null? Center(child: Text('No stories')) : InkWell(
-                          onTap: () {
-                            print('clicked');
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (BuildContext context) => StoryPage(
-                                  storyImage: snapshot.data.docs[index]
-                                      ['storyImage'],
-                                  storyTitle: snapshot.data.docs[index]
-                                      ['storyTitle'],
-                                  storyTime: snapshot.data.docs[index]
-                                      ['storyTime'],
-                                  storyType: snapshot.data.docs[index]
-                                      ['storyType'],
-                                  storyDescription: snapshot.data.docs[index]
-                                      ['storyDescription'],
+                        data[index] == null
+                            ? Center(child: Text('No stories'))
+                            : InkWell(
+                                onTap: () {
+                                  print('clicked');
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (BuildContext context) =>
+                                          StoryPage(
+                                            storyImage: snapshot
+                                                .data
+                                                .docs[index]['storyImage'],
+                                            storyTitle: snapshot
+                                                .data
+                                                .docs[index]['storyTitle'],
+                                            storyTime: snapshot
+                                                .data
+                                                .docs[index]['storyTime'],
+                                            storyType: snapshot
+                                                .data
+                                                .docs[index]['storyType'],
+                                            storyDescription: snapshot
+                                                .data
+                                                .docs[index]['storyDescription'],
+                                          ),
+                                    ),
+                                  );
+                                },
+                                child: ListCard(
+                                  storyImage:
+                                      snapshot.data.docs[index]['storyImage'],
+                                  storyTitle:
+                                      snapshot.data.docs[index]['storyTitle'],
+                                  storyTime:
+                                      snapshot.data.docs[index]['storyTime'],
+                                  storyType:
+                                      snapshot.data.docs[index]['storyType'],
+                                  locationID: locationID,
                                 ),
                               ),
-                            );
-                          },
-                          child: ListCard(
-                            storyImage: snapshot.data.docs[index]['storyImage'],
-                            storyTitle: snapshot.data.docs[index]['storyTitle'],
-                            storyTime: snapshot.data.docs[index]['storyTime'],
-                            storyType: snapshot.data.docs[index]['storyType'],
-                            locationID: locationID,
-                          ),
-                        ),
                         SizedBox(height: bottomSpace),
                         Container(color: Color(0xffeeeeee), height: 1),
                       ],
@@ -124,16 +131,17 @@ class DetailsInfo extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (BuildContext context) => StoryPage(
-                                  storyImage: snapshot.data.docs[index]
-                                      ['storyImage'],
-                                  storyTitle: snapshot.data.docs[index]
-                                      ['storyTitle'],
-                                  storyTime: snapshot.data.docs[index]
-                                      ['storyTime'],
-                                  storyType: snapshot.data.docs[index]
-                                      ['storyType'],
-                                  storyDescription: snapshot.data.docs[index]
-                                      ['storyDescription'],
+                                  storyImage:
+                                      snapshot.data.docs[index]['storyImage'],
+                                  storyTitle:
+                                      snapshot.data.docs[index]['storyTitle'],
+                                  storyTime:
+                                      snapshot.data.docs[index]['storyTime'],
+                                  storyType:
+                                      snapshot.data.docs[index]['storyType'],
+                                  storyDescription: snapshot
+                                      .data
+                                      .docs[index]['storyDescription'],
                                 ),
                               ),
                             );
@@ -161,16 +169,17 @@ class DetailsInfo extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (BuildContext context) => StoryPage(
-                                  storyImage: snapshot.data.docs[index]
-                                      ['storyImage'],
-                                  storyTitle: snapshot.data.docs[index]
-                                      ['storyTitle'],
-                                  storyTime: snapshot.data.docs[index]
-                                      ['storyTime'],
-                                  storyType: snapshot.data.docs[index]
-                                      ['storyType'],
-                                  storyDescription: snapshot.data.docs[index]
-                                      ['storyDescription'],
+                                  storyImage:
+                                      snapshot.data.docs[index]['storyImage'],
+                                  storyTitle:
+                                      snapshot.data.docs[index]['storyTitle'],
+                                  storyTime:
+                                      snapshot.data.docs[index]['storyTime'],
+                                  storyType:
+                                      snapshot.data.docs[index]['storyType'],
+                                  storyDescription: snapshot
+                                      .data
+                                      .docs[index]['storyDescription'],
                                 ),
                               ),
                             );

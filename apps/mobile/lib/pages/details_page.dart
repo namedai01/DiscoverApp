@@ -14,12 +14,13 @@ class DetailsPage extends StatefulWidget {
 
   //Recieving Datas
   DetailsPage({
-    this.imagePath,
-    this.venueName,
-    this.venueLocation,
-    this.description,
-    this.numberStories,
-    this.locationID,
+    super.key,
+    required this.imagePath,
+    required this.venueName,
+    required this.venueLocation,
+    required this.description,
+    required this.numberStories,
+    required this.locationID,
   });
 
   @override
@@ -75,9 +76,7 @@ class _DetailsPageState extends State<DetailsPage> {
             child: Material(
               color: Colors.transparent,
               child: IconButton(
-                icon: Icon(
-                  Icons.arrow_downward,
-                ),
+                icon: Icon(Icons.arrow_downward),
                 onPressed: () {
                   scrollDown();
                 },
@@ -95,7 +94,7 @@ class _DetailsPageState extends State<DetailsPage> {
           PageView(
             onPageChanged: (int page) {
               setState(() {
-                (controller.page > 0.5) ? fadeOut() : fadeIn();
+                ((controller.page ?? 0) > 0.5) ? fadeOut() : fadeIn();
               });
             },
             controller: controller,
@@ -132,7 +131,7 @@ class _DetailsPageState extends State<DetailsPage> {
                 ),
               ),
             ],
-          )
+          ),
         ],
       ),
     );

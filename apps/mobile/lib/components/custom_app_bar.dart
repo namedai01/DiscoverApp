@@ -55,9 +55,5 @@ class RadioList {
   final String colorName;
   final Color radioColor;
 
-  RadioList(
-    this.isActive,
-    this.colorName,
-    this.radioColor,
-  );
+  RadioList(this.isActive, this.colorName, this.radioColor);
 }

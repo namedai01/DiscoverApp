@@ -10,10 +10,7 @@ Widget pageHeader(String heading, double hZPadding) {
     child: Text(
       heading,
       textAlign: TextAlign.left,
-      style: TextStyle(
-        fontSize: 30,
-        fontWeight: FontWeight.bold,
-      ),
+      style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
     ),
   );
 }

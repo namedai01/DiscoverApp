@@ -13,11 +13,12 @@ Widget exploreList(datas) {
       return Row(
         children: <Widget>[
           SizedBox(
-              width: (index == 0)
-                  ? 30
-                  : (index < datas.length - 1)
-                      ? 10
-                      : 10),
+            width: (index == 0)
+                ? 30
+                : (index < datas.length - 1)
+                ? 10
+                : 10,
+          ),
           MainCard(
             imagePath: datas[index]['imagePath'],
             venueName: datas[index]['venueName'],
@@ -26,11 +27,12 @@ Widget exploreList(datas) {
             locationID: datas[index].id,
           ),
           SizedBox(
-              width: (index == 0)
-                  ? 0
-                  : (index < datas.length - 1)
-                      ? 0
-                      : 30),
+            width: (index == 0)
+                ? 0
+                : (index < datas.length - 1)
+                ? 0
+                : 30,
+          ),
         ],
       );
     },
@@ -59,7 +61,5 @@ Widget explorePeopleList(datas, followerDict) {
 
 //Info to be displayed on Explore Page when no Search result found.
 Widget noSearch() {
-  return Center(
-    child: Text('No Data'),
-  );
+  return Center(child: Text('No Data'));
 }

@@ -4,10 +4,7 @@ class InfoCard extends StatelessWidget {
   final String displayValue;
   final String labelTitle;
 
-  InfoCard({
-    @required this.displayValue,
-    @required this.labelTitle,
-  });
+  InfoCard({super.key, required this.displayValue, required this.labelTitle});
   @override
   Widget build(BuildContext context) {
     return Container(

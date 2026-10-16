@@ -1,7 +1,12 @@
 # Explore App (mobile)
 
-`cp .env.example .env`
+Flutter 3.47+ / Dart 3.13+, null-safe.
 
-**Don't upgrade dependencies**
+```bash
+cp .env.example .env
+flutter pub get
+flutter run
+```
 
-`wemapgl` points to the vendored SDK at `../../packages/wemapgl/` (see `pubspec.yaml`). Change that path only if you use a different SDK copy.
+- Map tab uses `flutter_map` with public OpenStreetMap tiles. OSM's tile policy does not allow heavy production traffic: before release, point `TileLayer.urlTemplate` in `lib/pages/maps_page.dart` at a hosted tile provider.
+- iOS: add `ios/Runner/GoogleService-Info.plist` (not committed) before running on iOS.

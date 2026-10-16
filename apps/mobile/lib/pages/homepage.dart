@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:exploreapp/pages/people_page.dart';
 import 'package:flutter/material.dart';
-import 'package:connectivity/connectivity.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../pages/explore_page.dart';
 import '../pages/maps_page.dart';
@@ -12,23 +12,26 @@ import '../components/dialog.dart';
 import 'create_story_page.dart';
 
 class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
   @override
-  _HomePageState createState() => _HomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
   var connectivityStatus = 'Unknown';
 
   Connectivity connectivity = Connectivity();
-  StreamSubscription<ConnectivityResult> connectivitySubs;
+  late StreamSubscription<List<ConnectivityResult>> connectivitySubs;
 
   @override
   void initState() {
     super.initState();
-    connectivitySubs =
-        connectivity.onConnectivityChanged.listen((ConnectivityResult result) {
+    connectivitySubs = connectivity.onConnectivityChanged.listen((
+      List<ConnectivityResult> result,
+    ) {
       connectivityStatus = result.toString();
-      if (result == ConnectivityResult.none) {
+      if (result.contains(ConnectivityResult.none) && mounted) {
         noInternetDialog(context);
       }
     });
@@ -36,8 +39,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    super.dispose();
     connectivitySubs.cancel();
+    super.dispose();
   }
 
   @override
@@ -67,25 +70,15 @@ class _HomePageState extends State<HomePage> {
         ),
         bottomNavigationBar: TabBar(
           labelColor: Theme.of(context).primaryColor,
-          unselectedLabelColor: Theme.of(context).accentColor,
-          indicatorColor: Colors.yellowAccent.withOpacity(0.0),
+          unselectedLabelColor: Theme.of(context).colorScheme.secondary,
+          indicatorColor: Colors.transparent,
           labelPadding: EdgeInsets.all(20),
           tabs: <Widget>[
-            Tab(
-              icon: Icon(Icons.explore_outlined, size: 30,),
-            ),
-            Tab(
-              icon: Icon(Icons.people, size: 30,),
-            ),
-            Tab(
-              icon: Icon(Icons.map, size: 30),
-            ),
-            Tab(
-              icon: Icon(Icons.post_add, size: 30),
-            ),
-            Tab(
-              icon: Icon(Icons.person_outline, size: 30,),
-            ),
+            Tab(icon: Icon(Icons.explore_outlined, size: 30)),
+            Tab(icon: Icon(Icons.people, size: 30)),
+            Tab(icon: Icon(Icons.map, size: 30)),
+            Tab(icon: Icon(Icons.post_add, size: 30)),
+            Tab(icon: Icon(Icons.person_outline, size: 30)),
           ],
         ),
       ),

@@ -15,38 +15,38 @@ class UserPublicProfilePage extends StatefulWidget {
   int follower;
 
   UserPublicProfilePage({
-    this.uid,
-    this.displayName,
-    this.photoURL,
-    this.follower,
+    super.key,
+    required this.uid,
+    required this.displayName,
+    required this.photoURL,
+    required this.follower,
   });
 
   @override
-  _UserPublicProfilePageState createState() => _UserPublicProfilePageState();
+  State<UserPublicProfilePage> createState() => _UserPublicProfilePageState();
 }
 
 class _UserPublicProfilePageState extends State<UserPublicProfilePage> {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
   final FirebaseAuth firebaseAuth = FirebaseAuth.instance;
-  bool fl;
+  bool fl = false;
 
   @override
   void initState() {
     super.initState();
-    fl = false;
     firestore
         .collection(followCollectionPath)
-        .where("follower", isEqualTo: firebaseAuth.currentUser.uid)
+        .where("follower", isEqualTo: firebaseAuth.currentUser!.uid)
         .where('target', isEqualTo: widget.uid)
         .get()
         .then((value) {
-      if (value != null) {
-        logger.d("User public profile", value.docs[0].id);
-        setState(() {
-          fl = true;
+          if (value.docs.isNotEmpty && mounted) {
+            logger.d("User public profile: ${value.docs[0].id}");
+            setState(() {
+              fl = true;
+            });
+          }
         });
-      }
-    });
   }
 
   @override
@@ -81,72 +81,88 @@ class _UserPublicProfilePageState extends State<UserPublicProfilePage> {
                       ),
                     ),
                   ),
-                  Center(
-                    child: Text(widget.displayName),
-                  ),
-                  widget.uid != FirebaseAuth.instance.currentUser.uid
+                  Center(child: Text(widget.displayName)),
+                  widget.uid != FirebaseAuth.instance.currentUser!.uid
                       ? Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(formatFollower(widget.follower)),
-                            SizedBox(
-                              width: 20,
-                            ),
+                            SizedBox(width: 20),
                             StreamBuilder(
                               stream: FirebaseAuth.instance.authStateChanges(),
-                              builder: (BuildContext context,
-                                  AsyncSnapshot snapshot) {
-                                if (!snapshot.hasData) return Container();
-                                String currentUid = snapshot.data.uid;
-                                return StreamBuilder(
-                                  stream: firestore
-                                      .collection(followCollectionPath)
-                                      .where('follower', isEqualTo: currentUid)
-                                      .where('target', isEqualTo: widget.uid)
-                                      .snapshots(),
-                                  builder: (BuildContext context,
-                                      AsyncSnapshot snapshot) {
-                                    if (!snapshot.hasData ||
-                                        snapshot.data.docs.length == 0) {
-                                      return ElevatedButton(
-                                          onPressed: () {
-                                            follow(currentUid, widget.uid);
+                              builder:
+                                  (
+                                    BuildContext context,
+                                    AsyncSnapshot snapshot,
+                                  ) {
+                                    if (!snapshot.hasData) return Container();
+                                    String currentUid = snapshot.data.uid;
+                                    return StreamBuilder(
+                                      stream: firestore
+                                          .collection(followCollectionPath)
+                                          .where(
+                                            'follower',
+                                            isEqualTo: currentUid,
+                                          )
+                                          .where(
+                                            'target',
+                                            isEqualTo: widget.uid,
+                                          )
+                                          .snapshots(),
+                                      builder:
+                                          (
+                                            BuildContext context,
+                                            AsyncSnapshot snapshot,
+                                          ) {
+                                            if (!snapshot.hasData ||
+                                                snapshot.data.docs.length ==
+                                                    0) {
+                                              return ElevatedButton(
+                                                onPressed: () {
+                                                  follow(
+                                                    currentUid,
+                                                    widget.uid,
+                                                  );
+                                                },
+                                                child: Text('Follow'),
+                                              );
+                                            } else {
+                                              return ElevatedButton(
+                                                style: ButtonStyle(
+                                                  backgroundColor:
+                                                      WidgetStateProperty.all<
+                                                        Color
+                                                      >(Colors.white10),
+                                                ),
+                                                onPressed: () {
+                                                  unfollow(
+                                                    currentUid,
+                                                    widget.uid,
+                                                  );
+                                                },
+                                                child: Text('Unfollow'),
+                                              );
+                                            }
                                           },
-                                          child: Text('Follow'));
-                                    } else {
-                                      return ElevatedButton(
-                                          style: ButtonStyle(
-                                            backgroundColor:
-                                                MaterialStateProperty.all<
-                                                    Color>(Colors.white10),
-                                          ),
-                                          onPressed: () {
-                                            unfollow(currentUid, widget.uid);
-                                          },
-                                          child: Text('Unfollow'));
-                                    }
+                                    );
                                   },
-                                );
-                              },
                             ),
                           ],
                         )
                       : Center(child: Text(formatFollower(widget.follower))),
-                  SizedBox(
-                    height: 20,
-                  ),
-                  Divider(
-                    thickness: 2,
-                  ),
+                  SizedBox(height: 20),
+                  Divider(thickness: 2),
                   fl
                       ? Expanded(child: UserStoriesTimeLine(uid: widget.uid))
                       : Container(
-                    margin: EdgeInsets.all(50),
+                          margin: EdgeInsets.all(50),
                           child: Center(
-                              child: Text(
-                          "Please follow me to sightsee !!!",
-                          textAlign: TextAlign.center,
-                        )))
+                            child: Text(
+                              "Please follow me to sightsee !!!",
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
                 ],
               ),
             ),
@@ -174,22 +190,23 @@ class _UserPublicProfilePageState extends State<UserPublicProfilePage> {
       widget.follower++;
     });
 
-    return firestore
-        .collection(followCollectionPath)
-        .add({'follower': currentUid, 'target': uid});
+    await firestore.collection(followCollectionPath).add({
+      'follower': currentUid,
+      'target': uid,
+    });
   }
 
   Future<void> unfollow(String currentUid, String uid) async {
     setState(() {
-      fl = false;
       widget.follower--;
     });
-    List<dynamic> records = (await firestore
-            .collection(followCollectionPath)
-            .where('follower', isEqualTo: currentUid)
-            .where('target', isEqualTo: uid)
-            .get())
-        .docs;
+    List<dynamic> records =
+        (await firestore
+                .collection(followCollectionPath)
+                .where('follower', isEqualTo: currentUid)
+                .where('target', isEqualTo: uid)
+                .get())
+            .docs;
     for (var record in records) {
       firestore.collection(followCollectionPath).doc(record.id).delete();
     }

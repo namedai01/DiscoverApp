@@ -6,149 +6,131 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:rxdart/subjects.dart';
 
 import './logic/bloc.dart';
-import './pages/homepage.dart';
 import './logic/sharedPref_logic.dart';
 import './logic/theme_chooser.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
-import 'package:wemapgl/wemapgl.dart' as WEMAP;
+import './pages/homepage.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
-final BehaviorSubject<ReceivedNotification> didReceiveLocalNotificationSubject =
-    BehaviorSubject<ReceivedNotification>();
-
-class ReceivedNotification {
-  ReceivedNotification({
-    @required this.id,
-    @required this.title,
-    @required this.body,
-    @required this.payload,
-  });
-
-  final int id;
-  final String title;
-  final String body;
-  final String payload;
-}
-
-
-
-
-void main() async {
-  WEMAP.Configuration.setWeMapKey("GqfwrZUEfxbwbnQUhtBMFivEysYIxelQ");
-
+Future<void> main() async {
   //Following codes Customizes the StatusBar & NavigationBar.
   //Services Package were imported for these.
   WidgetsFlutterBinding.ensureInitialized();
-  await load(fileName: ".env");
+  await dotenv.load(fileName: ".env");
   await Firebase.initializeApp();
-  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-    systemNavigationBarColor: Colors.white,
-    systemNavigationBarIconBrightness: Brightness.dark,
-    systemNavigationBarDividerColor: Colors.transparent,
-  ));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
+      systemNavigationBarDividerColor: Colors.transparent,
+    ),
+  );
 
-  initializeNotification();
+  await initializeNotification();
   registerNotification();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
-void initializeNotification() async {
-  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-  const AndroidInitializationSettings initializationSettingsAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-  final IOSInitializationSettings initializationSettingsIOS =
-      IOSInitializationSettings(onDidReceiveLocalNotification:
-          (int id, String title, String body, String payload) async {
-    didReceiveLocalNotificationSubject.add(ReceivedNotification(
-        id: id, title: title, body: body, payload: payload));
-  });
-  // final MacOSInitializationSettings initializationSettingsMacOS =
-  //     MacOSInitializationSettings();
-  // final InitializationSettings initializationSettings = InitializationSettings(
-  //     android: initializationSettingsAndroid,
-  //     iOS: initializationSettingsIOS,
-  //     macOS: initializationSettingsMacOS);
-  ///[Chu' y
-  var initializationSettings = new InitializationSettings(
-      initializationSettingsAndroid, initializationSettingsIOS);
-  /// ]
-  await flutterLocalNotificationsPlugin.initialize(initializationSettings,
-      onSelectNotification: (String payload) async {
-    if (payload != null) {
-      debugPrint('notification payload: $payload');
-    }
-  });
+Future<void> initializeNotification() async {
+  const initializationSettings = InitializationSettings(
+    android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    iOS: DarwinInitializationSettings(),
+  );
+  await flutterLocalNotificationsPlugin.initialize(
+    settings: initializationSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse response) {
+      if (response.payload != null) {
+        debugPrint('notification payload: ${response.payload}');
+      }
+    },
+  );
+
+  /// Android 13+ needs the runtime POST_NOTIFICATIONS permission.
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >()
+      ?.requestNotificationsPermission();
 }
 
-void registerNotification() async {
-  FirebaseAuth.instance
-      .authStateChanges()
-      .listen(registerNotificationForCurrentUser);
+void registerNotification() {
+  FirebaseAuth.instance.authStateChanges().listen(
+    registerNotificationForCurrentUser,
+  );
 }
 
-void registerNotificationForCurrentUser(User user) {
-  print('register current user');
+void registerNotificationForCurrentUser(User? user) {
+  debugPrint('register current user');
   if (user == null) return;
   FirebaseFirestore.instance
-      .collection('follow')
+      .collection(followCollectionPath)
       .where('follower', isEqualTo: user.uid)
       .snapshots()
       .listen((event) {
-    List<String> followingUid =
-        event.docs.map((e) => e['target'].toString()).toList();
-    for (String uid in followingUid) {
-      registerSingleUserNotification(uid);
-    }
-  });
+        List<String> followingUid = event.docs
+            .map((e) => e['target'].toString())
+            .toList();
+        for (String uid in followingUid) {
+          registerSingleUserNotification(uid);
+        }
+      });
 }
 
-void registerSingleUserNotification(String targetUid) async {
+void registerSingleUserNotification(String targetUid) {
   int numPreviousStories = -1;
   FirebaseFirestore.instance
-      .collection('stories')
+      .collection(storiesCollectionPath)
       .where('owner', isEqualTo: targetUid)
       .snapshots()
       .listen((event) {
-    if (event.docs.length > numPreviousStories && numPreviousStories != -1) {
-      showNewStoryNotification(targetUid);
-    }
-    numPreviousStories = event.docs.length;
-  });
+        if (event.docs.length > numPreviousStories &&
+            numPreviousStories != -1) {
+          showNewStoryNotification(targetUid);
+        }
+        numPreviousStories = event.docs.length;
+      });
 }
 
 Future<void> showNewStoryNotification(String uid) async {
-  String name = (await FirebaseFirestore.instance.collection(userCollectionPath).doc(uid).get())['displayName'];
-  /// fix me "const"
-  AndroidNotificationDetails androidPlatformChannelSpecifics =
-      AndroidNotificationDetails(
-          '1', 'Explore App', 'Explore App',
-          importance: Importance.Max,
-          priority: Priority.High,
-          ticker: 'ticker');
-
-  /// Fix me
-  NotificationDetails platformChannelSpecifics =
-      NotificationDetails(androidPlatformChannelSpecifics, null);
+  final userDoc = await FirebaseFirestore.instance
+      .collection(userCollectionPath)
+      .doc(uid)
+      .get();
+  final String name = userDoc.data()?['displayName'] ?? 'Someone';
+  const platformChannelSpecifics = NotificationDetails(
+    android: AndroidNotificationDetails(
+      '1',
+      'Explore App',
+      channelDescription: 'Explore App',
+      importance: Importance.max,
+      priority: Priority.high,
+      ticker: 'ticker',
+    ),
+    iOS: DarwinNotificationDetails(),
+  );
   await flutterLocalNotificationsPlugin.show(
-      0, '', '$name have just uploaded a new story.', platformChannelSpecifics,
-      payload: 'item x');
+    id: 0,
+    title: '',
+    body: '$name have just uploaded a new story.',
+    notificationDetails: platformChannelSpecifics,
+    payload: 'item x',
+  );
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
-  _MyAppState createState() => _MyAppState();
+  State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
@@ -160,23 +142,29 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
+    return StreamBuilder<String>(
       stream: bloc.recieveColorName,
       initialData: 'Yellow',
-      builder: (BuildContext context, AsyncSnapshot snapshot) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Explore App',
-        theme: ThemeData(
-          primaryColor: themeChooser(snapshot.data),
-          accentColor: Color(0xffb6b6b6),
-          fontFamily: 'NotoSerif',
-          scaffoldBackgroundColor: Colors.white,
-        ),
+      builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
+        final Color primary = themeChooser(snapshot.data);
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Explore App',
+          theme: ThemeData(
+            // Keep the original Material 2 look; Material 3 restyles every widget.
+            useMaterial3: false,
+            primaryColor: primary,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: primary,
+            ).copyWith(primary: primary, secondary: const Color(0xffb6b6b6)),
+            fontFamily: 'NotoSerif',
+            scaffoldBackgroundColor: Colors.white,
+          ),
 
-        //The HomePage is being called here homepage.dart
-        //Also the bloc is being transfered to HomePage here. Its Imp.
-        home: HomePage(),
-      ),
+          //The HomePage is being called here homepage.dart
+          home: const HomePage(),
+        );
+      },
     );
   }
 }

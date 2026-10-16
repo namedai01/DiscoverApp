@@ -9,10 +9,11 @@ searchedExploreList(datas, searchVal) {
   for (int i = 0; i < datas.length; ++i) {
     if (datas[i]['venueName']
             .substring(
-                0,
-                (searchVal.length < datas[i]['venueName'].length)
-                    ? searchVal.length
-                    : datas[i]['venueName'].length)
+              0,
+              (searchVal.length < datas[i]['venueName'].length)
+                  ? searchVal.length
+                  : datas[i]['venueName'].length,
+            )
             .toLowerCase() ==
         searchVal.toLowerCase()) {
       listLocal.add(datas[i]);
@@ -26,15 +27,18 @@ searchedPeopleExploreList(datas, searchVal, followerDict) {
   for (int i = 0; i < datas.length; ++i) {
     if (datas[i]['displayName']
             .substring(
-                0,
-                (searchVal.length < datas[i]['displayName'].length)
-                    ? searchVal.length
-                    : datas[i]['displayName'].length)
+              0,
+              (searchVal.length < datas[i]['displayName'].length)
+                  ? searchVal.length
+                  : datas[i]['displayName'].length,
+            )
             .toLowerCase() ==
         searchVal.toLowerCase()) {
       listLocal.add(datas[i]);
     }
   }
   print(listLocal);
-  return (listLocal.length != 0) ? explorePeopleList(listLocal, followerDict) : noSearch();
+  return (listLocal.length != 0)
+      ? explorePeopleList(listLocal, followerDict)
+      : noSearch();
 }

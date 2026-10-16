@@ -6,11 +6,7 @@ class ColorRadio extends StatelessWidget {
   final String colorName;
   final Color radioColor;
 
-  ColorRadio(
-    this.isActive,
-    this.colorName,
-    this.radioColor,
-  );
+  ColorRadio(this.isActive, this.colorName, this.radioColor);
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +19,7 @@ class ColorRadio extends StatelessWidget {
       ),
       child: Icon(
         Icons.check,
-        color: Colors.white.withOpacity((isActive) ? 1.0 : 0.0),
+        color: Colors.white.withValues(alpha: isActive ? 1.0 : 0.0),
       ),
     );
   }

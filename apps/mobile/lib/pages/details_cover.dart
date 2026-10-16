@@ -10,10 +10,11 @@ class DetailsCover extends StatelessWidget {
 
   //Recieving Datas
   DetailsCover({
-    this.imagePath,
-    this.venueName,
-    this.venueLocation,
-    this.numberStories,
+    super.key,
+    required this.imagePath,
+    required this.venueName,
+    required this.venueLocation,
+    required this.numberStories,
   });
 
   final FirebaseFirestore locationsFSI = FirebaseFirestore.instance;
@@ -31,7 +32,7 @@ class DetailsCover extends StatelessWidget {
             image: NetworkImage(imagePath),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
-              Colors.black.withOpacity(0.2),
+              Colors.black.withValues(alpha: 0.2),
               BlendMode.multiply,
             ),
           ),
@@ -58,10 +59,7 @@ class DetailsCover extends StatelessWidget {
               //Venue Location + some other details.
               color: Colors.transparent,
               child: Text(
-                venueLocation +
-                    '  .  ' +
-                    numberStories.toString() +
-                    ' Stories',
+                venueLocation + '  .  ' + numberStories.toString() + ' Stories',
                 textAlign: TextAlign.left,
                 style: TextStyle(
                   fontFamily: 'OpenSans',

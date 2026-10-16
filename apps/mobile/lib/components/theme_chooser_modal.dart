@@ -28,11 +28,10 @@ void showSettingsBottomSheet(context, radioList) {
               children: <Widget>[
                 SizedBox(height: 40),
                 Text(
-                  'Choose an\n' 'Accent Color',
+                  'Choose an\n'
+                  'Accent Color',
                   textAlign: TextAlign.left,
-                  style: TextStyle(
-                    fontSize: 28,
-                  ),
+                  style: TextStyle(fontSize: 28),
                 ),
                 SizedBox(height: 30),
                 Container(
@@ -54,7 +53,8 @@ void showSettingsBottomSheet(context, radioList) {
                                 print('Already selected theme pressed');
                               } else {
                                 radioList.forEach(
-                                    (element) => element.isActive = false);
+                                  (element) => element.isActive = false,
+                                );
                                 bloc.feedStatus('false');
 
                                 radioList[index].isActive =
@@ -65,11 +65,12 @@ void showSettingsBottomSheet(context, radioList) {
                             },
                           ),
                           SizedBox(
-                              width: (index == radioList.length - 1)
-                                  ? 0
-                                  : ((MediaQuery.of(context).size.width -
+                            width: (index == radioList.length - 1)
+                                ? 0
+                                : ((MediaQuery.of(context).size.width -
                                           (70 + (50 * radioList.length))) /
-                                      (radioList.length - 1))),
+                                      (radioList.length - 1)),
+                          ),
                         ],
                       );
                     },

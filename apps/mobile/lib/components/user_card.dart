@@ -9,10 +9,16 @@ class UserCard extends StatefulWidget {
   final String photoURL;
   final int follower;
 
-  UserCard({this.uid, this.displayName, this.photoURL, this.follower});
+  const UserCard({
+    super.key,
+    required this.uid,
+    required this.displayName,
+    required this.photoURL,
+    required this.follower,
+  });
 
   @override
-  _UserCardState createState() => _UserCardState();
+  State<UserCard> createState() => _UserCardState();
 }
 
 class _UserCardState extends State<UserCard> {
@@ -21,9 +27,9 @@ class _UserCardState extends State<UserCard> {
     return InkWell(
       onTap: () {
         if (FirebaseAuth.instance.currentUser == null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("Please Login :(((("),
-          ));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Please Login :((((")));
         } else {
           Navigator.push(
             context,
@@ -37,7 +43,6 @@ class _UserCardState extends State<UserCard> {
             ),
           );
         }
-
       },
       child: Row(
         children: <Widget>[

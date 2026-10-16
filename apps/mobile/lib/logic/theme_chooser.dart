@@ -4,10 +4,11 @@ import 'package:flutter/material.dart';
 themeChooser(data) => (data == 'Yellow')
     ? Color(0xffEAC21E)
     : (data == 'Red')
-        ? Color(0xffff3f20)
-        : (data == 'Blue')
-            ? Color(0xff00aeff)
-            : (data == 'Green')
-                ? Color(0xff00d000)
-                : (data == 'Pink') ? Color(0xffff00a8) : Colors.grey;
-
+    ? Color(0xffff3f20)
+    : (data == 'Blue')
+    ? Color(0xff00aeff)
+    : (data == 'Green')
+    ? Color(0xff00d000)
+    : (data == 'Pink')
+    ? Color(0xffff00a8)
+    : Colors.grey;

@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:exploreapp/logic/map_logic.dart';
 import 'package:exploreapp/utils.dart';
 import 'package:flutter/material.dart';
 
@@ -14,29 +13,30 @@ class ListCard extends StatefulWidget {
   final String locationID;
 
   ListCard({
-    this.storyImage,
-    this.storyTitle,
-    this.storyTime,
-    this.storyType,
-    this.locationID,
+    super.key,
+    required this.storyImage,
+    required this.storyTitle,
+    required this.storyTime,
+    required this.storyType,
+    required this.locationID,
   });
 
   @override
-  _ListCardState createState() => _ListCardState();
+  State<ListCard> createState() => _ListCardState();
 }
+
 class _ListCardState extends State<ListCard> {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
-  var locationName;
+  String locationName = "";
   @override
   void initState() {
     super.initState();
-    locationName = "";
     firestore
         .collection(locationCollectionPath)
         .doc(widget.locationID)
         .get()
         .then((value) {
-          if (value != null) {
+          if (value.exists && mounted) {
             // logger.d("user_stories_timeline.dart", value["venueName"]);
             setState(() {
               locationName = value["venueName"];
@@ -44,6 +44,7 @@ class _ListCardState extends State<ListCard> {
           }
         });
   }
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -72,14 +73,19 @@ class _ListCardState extends State<ListCard> {
               child: RichText(
                 overflow: TextOverflow.ellipsis,
                 text: TextSpan(
-                    style: Theme.of(context).textTheme.body1,
-                    children: [
-                      WidgetSpan(child: Padding(
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  children: [
+                    WidgetSpan(
+                      child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 2.0),
                         child: Icon(Icons.title),
-                      )),
-                      TextSpan(text: widget.storyTitle, style: TextStyle(fontSize: 15))
-                    ]
+                      ),
+                    ),
+                    TextSpan(
+                      text: widget.storyTitle,
+                      style: TextStyle(fontSize: 15),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -90,14 +96,19 @@ class _ListCardState extends State<ListCard> {
               child: RichText(
                 overflow: TextOverflow.ellipsis,
                 text: TextSpan(
-                    style: Theme.of(context).textTheme.body1,
-                    children: [
-                      WidgetSpan(child: Padding(
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  children: [
+                    WidgetSpan(
+                      child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 2.0),
                         child: Icon(Icons.location_on_outlined),
-                      )),
-                      TextSpan(text: locationName, style: TextStyle(fontSize: 15))
-                    ]
+                      ),
+                    ),
+                    TextSpan(
+                      text: locationName,
+                      style: TextStyle(fontSize: 15),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -107,22 +118,27 @@ class _ListCardState extends State<ListCard> {
               width: MediaQuery.of(context).size.width - 160,
               child: RichText(
                 text: TextSpan(
-                    style: Theme.of(context).textTheme.body1,
-                    children: [
-                      WidgetSpan(child: Padding(
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  children: [
+                    WidgetSpan(
+                      child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 2.0),
                         child: Icon(Icons.access_time),
-                      )),
-                      TextSpan(
-                        text: getFormattedTimeDistanceToCurrent(widget.storyTime) + ' . ' + widget.storyType,
-                        style: TextStyle(
-                          fontFamily: 'OpenSans',
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: Color(0xffacacac),
-                        )
-                      )
-                    ]
+                      ),
+                    ),
+                    TextSpan(
+                      text:
+                          getFormattedTimeDistanceToCurrent(widget.storyTime) +
+                          ' . ' +
+                          widget.storyType,
+                      style: TextStyle(
+                        fontFamily: 'OpenSans',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Color(0xffacacac),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               // child: Text(
@@ -143,5 +159,4 @@ class _ListCardState extends State<ListCard> {
       ],
     );
   }
-
 }

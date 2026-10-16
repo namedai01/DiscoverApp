@@ -29,9 +29,9 @@ class Bloc extends Object with ValueTransformer implements BaseBloc {
 
   @override
   dispose() {
-    _radioController?.close();
-    _themeController?.close();
-    _searchValController?.close();
+    _radioController.close();
+    _themeController.close();
+    _searchValController.close();
   }
 }
 

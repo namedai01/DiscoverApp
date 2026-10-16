@@ -7,10 +7,7 @@ class ExternalLinkIcon extends StatelessWidget {
   final String linkIcon;
   final String linkURL;
 
-  ExternalLinkIcon({
-    @required this.linkIcon,
-    @required this.linkURL,
-  });
+  ExternalLinkIcon({super.key, required this.linkIcon, required this.linkURL});
 
   @override
   Widget build(BuildContext context) {
@@ -18,13 +15,9 @@ class ExternalLinkIcon extends StatelessWidget {
       height: 35,
       width: 35,
       decoration: BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(linkIcon),
-        ),
+        image: DecorationImage(image: AssetImage(linkIcon)),
       ),
-      child: GestureDetector(
-        onTap: () => launchURL(linkURL),
-      ),
+      child: GestureDetector(onTap: () => launchURL(linkURL)),
     );
   }
 }
