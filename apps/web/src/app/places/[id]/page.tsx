@@ -25,8 +25,16 @@ const buttonBase = "rounded-lg px-4 py-2 font-medium";
 export default async function PlacePage({ params, searchParams }: Props) {
   const { id } = await params;
   const { posted } = await searchParams;
-  const place = await loadPlace(id);
-  const stories = await serverApi.listLocationStories(id, { limit: 12 });
+  // Concurrent, but the place's outcome is checked first: an unknown id makes
+  // both calls fail, and it must reach notFound() rather than a stories error.
+  const [placeResult, storiesResult] = await Promise.allSettled([
+    loadPlace(id),
+    serverApi.listLocationStories(id, { limit: 12 }),
+  ]);
+  if (placeResult.status === "rejected") throw placeResult.reason;
+  if (storiesResult.status === "rejected") throw storiesResult.reason;
+  const place = placeResult.value;
+  const stories = storiesResult.value;
 
   return (
     <article className="space-y-4">
