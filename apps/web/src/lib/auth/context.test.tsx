@@ -193,6 +193,32 @@ describe("AuthProvider", () => {
     expect(latest.auth.notice).toBeNull();
   });
 
+  it.each(["auth/too-many-requests", "auth/internal-error"])(
+    "a refresh that fails with %s keeps the session like a network error",
+    async (code) => {
+      const c = client({
+        getToken: vi.fn(async (force: boolean) => {
+          if (force) throw { code };
+          return "stale";
+        }),
+      });
+      loadAuthClient.mockResolvedValue(c);
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => json(401, { error: { code: "unauthorized", message: "x" } })),
+      );
+      mount();
+      await screen.findByText("signedIn");
+
+      await expect(latest.api.getMe()).rejects.toMatchObject({
+        code: "network",
+        status: 0,
+      });
+      expect(c.signOut).not.toHaveBeenCalled();
+      expect(latest.auth.notice).toBeNull();
+    },
+  );
+
   it("an offline first token lookup is a network error, not a sign-in prompt", async () => {
     const c = client({
       getToken: vi.fn().mockRejectedValue({ code: "auth/network-request-failed" }),

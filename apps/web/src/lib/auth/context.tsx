@@ -16,7 +16,13 @@ import { publicEnv } from "@/lib/env";
 import { loadAuthClient } from "./index";
 import type { AuthUser, FakeAuthClient, FirebaseAuthClient } from "./types";
 
-const NETWORK_FAILED = "auth/network-request-failed";
+// Firebase codes that say "try again later", not "these credentials are bad":
+// the session is intact, so they surface as a network error.
+const TRANSIENT_CODES: ReadonlySet<unknown> = new Set([
+  "auth/network-request-failed",
+  "auth/too-many-requests",
+  "auth/internal-error",
+]);
 
 export const SESSION_EXPIRED_NOTICE = "Your session expired. Sign in again.";
 
@@ -80,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [ensureClient]);
 
   // Rejects only with a typed network ApiError, when Firebase cannot reach its
-  // servers: the session is intact, so the API call fails as "offline" instead
+  // servers or is throttling/failing on its side: the session is intact, so the API call fails as "offline" instead
   // of prompting sign-in or signing out. Any other failure reads as "no
   // token", which the API client turns into a typed 401 (and, after a forced
   // refresh, a sign-out).
@@ -89,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         return await (await ensureClient()).getToken(force);
       } catch (e) {
-        if ((e as { code?: unknown } | null)?.code === NETWORK_FAILED) {
+        if (TRANSIENT_CODES.has((e as { code?: unknown } | null)?.code)) {
           throw new ApiError(
             0,
             "network",
