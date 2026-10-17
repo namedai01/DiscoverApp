@@ -5,6 +5,7 @@ package stories
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -124,16 +125,18 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	if _, err := users.Ensure(ctx, h.Q, caller, h.DefaultPhotoURL); err != nil {
-		httpx.Error(w, err)
-		return
-	}
+	// Look the location up before the first write, so a 422 leaves nothing
+	// behind (not even the caller's user row).
 	loc, err := h.Q.NearestLocation(ctx, store.NearestLocationParams{Lat: *req.Lat, Lng: *req.Lng})
 	if errors.Is(err, pgx.ErrNoRows) {
 		httpx.Error(w, httpx.Unprocessable("no locations exist yet to attach the story to"))
 		return
 	}
 	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	if _, err := users.Ensure(ctx, h.Q, caller, h.DefaultPhotoURL); err != nil {
 		httpx.Error(w, err)
 		return
 	}
@@ -149,6 +152,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	// The story is stored; push delivery must not delay or fail the response,
 	// nor die with the request context.
 	go func(ctx context.Context, id uuid.UUID) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				slog.Error("notify panic", "story_id", id, "panic", rec)
+			}
+		}()
 		ctx, cancel := context.WithTimeout(ctx, notifyTimeout)
 		defer cancel()
 		h.Notifier.StoryCreated(ctx, id)
