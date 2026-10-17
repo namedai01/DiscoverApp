@@ -43,7 +43,7 @@ Read from the environment (see `.env.example`).
 | Variable | Default | Required when | Notes |
 |---|---|---|---|
 | `APP_ENV` | `prod` | never | `dev` or `prod`. Defaults to `prod` so a missing value fails closed. |
-| `DATABASE_URL` | none | always | Parsed with `pgxpool.ParseConfig`, so `sslmode` and `pool_max_conns` go in the URL. |
+| `DATABASE_URL` | none | always | Parsed with `pgxpool.ParseConfig`, so `sslmode` and `pool_max_conns` go in the URL. For Neon prefer `sslmode=verify-full` (it verifies the server certificate; `require` encrypts but does not authenticate the server). |
 | `PORT` | `8080` | never | 1..65535. Cloud Run sets it. |
 | `AUTH_MODE` | `firebase` | never | `firebase` or `fake`. `fake` is refused unless `APP_ENV=dev`. |
 | `FIREBASE_PROJECT_ID` | none | `AUTH_MODE=firebase` | Firebase project that issues the ID tokens. |
@@ -83,9 +83,9 @@ In the container image: `docker compose run --rm --entrypoint /app/bin/seed api`
 
 ## API
 
-JSON, camelCase. Errors: `{"error":{"code":"<code>","message":"<text>"}}` with codes `bad_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`, `unprocessable`, `internal`. Timestamps are RFC 3339 UTC. Lists take `limit` (default 20, clamped to 1..100; non-integer is 400); offset lists also take `offset`, story lists take an opaque `cursor`.
+JSON, camelCase. Errors: `{"error":{"code":"<code>","message":"<text>"}}` with codes `bad_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`, `unprocessable`, `internal`. Every error uses this body, including unknown routes (404 `not_found`), wrong methods (405 `bad_request`, "method not allowed") and panics (500 `internal`). Timestamps are RFC 3339 UTC. Lists take `limit` (default 20, clamped to 1..100; non-integer is 400); offset lists also take `offset`, story lists take an opaque `cursor`.
 
-Identity comes only from `Authorization: Bearer <Firebase ID token>`. A missing, expired or forged token on a required route is 401.
+Identity comes only from `Authorization: Bearer <Firebase ID token>`. A missing, expired or forged token on a required route is 401; if Firebase cannot be reached to verify a token, the answer is 503 `authentication temporarily unavailable` (retry later, do not sign the user out).
 
 | Method + path | Auth | Purpose |
 |---|---|---|
@@ -114,14 +114,14 @@ Full steps are in `docs/setup/firebase-gcp.md`: section 7a (Neon) and 7b (Google
 gcloud run deploy memopin-api --source backend --region <REGION> \
   --service-account "$SA" \
   --set-secrets DATABASE_URL=database-url:latest \
-  --set-env-vars APP_ENV=prod,AUTH_MODE=firebase,FIREBASE_PROJECT_ID=<PROJECT_ID>,STORAGE_BUCKET=<PROJECT_ID>.firebasestorage.app,CORS_ORIGINS=<origins> \
+  --set-env-vars "^@^APP_ENV=prod@AUTH_MODE=firebase@FIREBASE_PROJECT_ID=<PROJECT_ID>@STORAGE_BUCKET=<PROJECT_ID>.firebasestorage.app@CORS_ORIGINS=<WEB_ORIGINS>" \
   --allow-unauthenticated
 ```
 
-`CORS_ORIGINS` is required in prod (the config refuses to start without it); the command in the setup doc predates that, so add it. For several origins, gcloud needs an alternate list delimiter, for example `--set-env-vars '^@^APP_ENV=prod@CORS_ORIGINS=https://a.example,https://b.example'`.
+`CORS_ORIGINS` is required in prod (the config refuses to start without it). Several origins contain commas, so the setup doc switches gcloud's list delimiter with `--set-env-vars "^@^APP_ENV=prod@...@CORS_ORIGINS=<WEB_ORIGINS>"`.
 
 - `--source backend` builds `backend/Dockerfile`: multi-stage, `golang:1.24` build with `CGO_ENABLED=0`, `distroless/static-debian12:nonroot` runtime, listening on `$PORT`.
-- Use the Neon **direct** connection string, never the `-pooler` host: goose migrations hold a session advisory lock, which a transaction pooler breaks. Append `&pool_max_conns=5`.
+- Use the Neon **direct** connection string, never the `-pooler` host: goose migrations hold a session advisory lock, which a transaction pooler breaks. Append `&pool_max_conns=5`, and use `sslmode=verify-full` rather than `require`.
 - Migrations run at startup. Several instances may start at once; the session lock makes them apply the schema one after another.
 - Credentials: the Cloud Run service account (Application Default Credentials). Never create a key file or set `GOOGLE_APPLICATION_CREDENTIALS`.
 - After the first deploy, seed Neon from your laptop (see Seed).
