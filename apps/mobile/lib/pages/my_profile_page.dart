@@ -4,12 +4,12 @@ import 'package:exploreapp/pages/user_stories_timeline.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:random_string/random_string.dart';
 
+import '../config.dart';
 import '../const.dart';
 
 class MyProfilePage extends StatefulWidget {
@@ -227,7 +227,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
   Future<void> createUserPublicProfile(String uid, String phoneNumber) async {
     return adminFSI.collection('users').doc(uid).set({
       "displayName": 'user $phoneNumber',
-      'photoURL': dotenv.env['DEFAULT_USER_PHOTO_URL'],
+      'photoURL': AppConfig.defaultUserPhotoUrl,
     });
   }
 

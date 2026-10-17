@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../components/page_heading.dart';
+import '../config.dart';
 import '../const.dart';
 import '../logic/map_logic.dart';
 import 'details_page.dart';
@@ -80,20 +81,20 @@ class _MapsPageState extends State<MapsPage> {
             borderRadius: BorderRadius.circular(5),
             child: FlutterMap(
               mapController: mapController,
-              options: const MapOptions(
-                initialCenter: LatLng(21.03, 105.78),
-                initialZoom: 5.0,
+              options: MapOptions(
+                initialCenter: AppConfig.mapInitialCenter,
+                initialZoom: AppConfig.mapInitialZoom,
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate: AppConfig.mapTileUrl,
                   userAgentPackageName: 'com.example.exploreapp',
                 ),
                 MarkerLayer(
                   markers: buildMarkers(locations, _onLocationTapped),
                 ),
-                const SimpleAttributionWidget(
-                  source: Text('OpenStreetMap contributors'),
+                SimpleAttributionWidget(
+                  source: Text(AppConfig.mapAttribution),
                 ),
               ],
             ),
