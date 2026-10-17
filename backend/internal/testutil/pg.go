@@ -3,6 +3,8 @@ package testutil
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"sync"
 	"testing"
 	"time"
@@ -61,8 +63,11 @@ func NewPool(t *testing.T) *pgxpool.Pool {
 }
 
 // RunMain runs the package's tests, then tears the shared container down.
-// Use it from TestMain: os.Exit(testutil.RunMain(m)).
+// It also silences the default slog logger so test output stays clean; tests
+// that assert on logs install their own logger. Use it from TestMain:
+// os.Exit(testutil.RunMain(m)).
 func RunMain(m *testing.M) int {
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
 	code := m.Run()
 	if pool != nil {
 		pool.Close()

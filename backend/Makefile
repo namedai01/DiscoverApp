@@ -6,7 +6,7 @@ dev:
 	set -a; . ./.env; set +a; go run ./cmd/api
 
 test:
-	go test ./...
+	go test -count=1 -p 1 ./...
 
 sqlc:
 	sqlc generate
