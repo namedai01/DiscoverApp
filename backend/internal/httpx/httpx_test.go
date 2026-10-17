@@ -101,3 +101,19 @@ func TestDecode(t *testing.T) {
 		})
 	}
 }
+
+func TestLikePrefix(t *testing.T) {
+	tests := map[string]string{
+		"hồ":   "hồ%",
+		"HỒ":   "hồ%",
+		"100%": `100\%%`,
+		"a_b":  `a\_b%`,
+		`a\b`:  `a\\b%`,
+		"":     "%",
+	}
+	for in, want := range tests {
+		if got := LikePrefix(in); got != want {
+			t.Errorf("LikePrefix(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

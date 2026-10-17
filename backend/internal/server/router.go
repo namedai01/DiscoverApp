@@ -16,6 +16,7 @@ import (
 	"github.com/namedai01/memopin/backend/internal/config"
 	"github.com/namedai01/memopin/backend/internal/db/store"
 	"github.com/namedai01/memopin/backend/internal/httpx"
+	"github.com/namedai01/memopin/backend/internal/locations"
 	"github.com/namedai01/memopin/backend/internal/users"
 )
 
@@ -45,8 +46,11 @@ func NewRouter(d Deps) http.Handler {
 
 	q := store.New(d.Pool)
 	usersH := &users.Handler{Q: q, Bucket: d.Cfg.StorageBucket, DefaultPhotoURL: d.Cfg.DefaultUserPhotoURL}
+	locationsH := &locations.Handler{Q: q}
 
 	r.Route("/v1", func(r chi.Router) {
+		r.Get("/locations", locationsH.List)
+		r.Get("/locations/{id}", locationsH.Get)
 		r.Group(func(r chi.Router) {
 			r.Use(auth.Required(d.Verifier))
 			r.Get("/me", usersH.GetMe)
