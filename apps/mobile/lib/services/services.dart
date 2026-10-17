@@ -9,7 +9,7 @@ import '../api/memopin_api.dart';
 import '../config.dart';
 import './push_registration.dart';
 
-/// The app's API client. Set by [initServices]; later tasks add more services.
+/// The app's API client. Set by [initServices].
 late final MemopinApi api;
 
 /// Registers this device for push and keeps the backend's device list in step.

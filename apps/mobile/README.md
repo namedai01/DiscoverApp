@@ -27,5 +27,5 @@ Flutter 3.47+ / Dart 3.13+, null-safe. The app talks to the Memopin Go API (`bac
 
 ## Notes
 
-- Lists load on open, on search change and on pull-to-refresh; there are no live listeners. New stories from people you follow arrive as FCM push sent by the backend.
+- Lists load on open and on search change; story lists (a place's and a user's) also support pull-to-refresh, while Explore and People have no pull-to-refresh and show a Retry button on failure. There are no live listeners. New stories from people you follow arrive as FCM push sent by the backend.
 - Map tab uses `flutter_map` with public OpenStreetMap tiles. OSM's tile policy does not allow heavy production traffic: set `MAP_TILE_URL` in `.env` to a hosted tile provider before release.
