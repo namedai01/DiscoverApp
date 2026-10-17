@@ -14,7 +14,12 @@ export class UploadError extends Error {
 }
 
 export function validateImageFile(file: File): string | null {
-  if (!file.type.startsWith("image/")) return "Choose an image file.";
+  // Some browsers leave the type empty for formats they do not know (HEIC);
+  // those go on to decoding, which explains the failure. A type that is set
+  // and is not an image is a plain wrong file.
+  if (file.type && !file.type.startsWith("image/")) {
+    return "Choose an image file.";
+  }
   if (file.size > MAX_SOURCE_BYTES) {
     return "That photo is too large (max 25 MB).";
   }

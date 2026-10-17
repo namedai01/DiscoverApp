@@ -59,6 +59,10 @@ describe("validateImageFile", () => {
     );
   });
 
+  it("lets an empty MIME type through to decoding", () => {
+    expect(validateImageFile(fileOf("", 1 * MIB, "IMG_0001.HEIC"))).toBeNull();
+  });
+
   it("rejects a photo over 25 MiB", () => {
     expect(validateImageFile(fileOf("image/png", 30 * MIB))).toBe(
       "That photo is too large (max 25 MB).",
@@ -142,6 +146,18 @@ describe("prepareUpload", () => {
       "Choose an image file.",
     );
     expect(decode).not.toHaveBeenCalled();
+  });
+
+  it("decodes a file with an empty MIME type and explains a decode failure", async () => {
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => {
+        throw new Error("decode failed");
+      }),
+    );
+    await expect(prepareUpload(fileOf("", 1 * MIB, "IMG_0001.HEIC"))).rejects.toThrow(
+      "This photo format isn't supported. Choose a JPEG or PNG.",
+    );
   });
 
   it("rejects a result over the 5 MiB storage limit", async () => {
