@@ -149,20 +149,41 @@ func TestFake_RejectionsAreInvalidToken(t *testing.T) {
 	}
 }
 
-func TestVerifyFailure_LoggedAtWarnWithRequestID(t *testing.T) {
+// captureLog runs one request with a bad bearer token through Required and
+// returns what the middleware logged.
+func captureLog(t *testing.T, v auth.Verifier) string {
+	t.Helper()
 	var buf bytes.Buffer
 	old := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
 	t.Cleanup(func() { slog.SetDefault(old) })
 
-	h := chimw.RequestID(auth.Required(auth.Fake{})(&probe{}))
+	h := chimw.RequestID(auth.Required(v)(&probe{}))
 	req := httptest.NewRequest("GET", "/", nil)
 	req.Header.Set("Authorization", "Bearer garbage")
 	req.Header.Set("X-Request-Id", "req-123")
 	h.ServeHTTP(httptest.NewRecorder(), req)
+	return buf.String()
+}
 
-	log := buf.String()
-	for _, want := range []string{"level=WARN", "request_id=req-123", "invalid_token=true"} {
+func TestInvalidToken_LoggedAtInfoWithRequestID(t *testing.T) {
+	log := captureLog(t, auth.Fake{})
+	for _, want := range []string{"level=INFO", "request_id=req-123"} {
+		if !strings.Contains(log, want) {
+			t.Fatalf("log %q missing %q", log, want)
+		}
+	}
+	if strings.Contains(log, "level=WARN") {
+		t.Fatalf("invalid token must not log at warn: %s", log)
+	}
+	if strings.Contains(log, "garbage") {
+		t.Fatalf("log must not contain the token: %s", log)
+	}
+}
+
+func TestVerifierOutage_LoggedAtWarnWithRequestID(t *testing.T) {
+	log := captureLog(t, stubVerifier{errors.New("fetch public keys: connection refused")})
+	for _, want := range []string{"level=WARN", "request_id=req-123", "connection refused"} {
 		if !strings.Contains(log, want) {
 			t.Fatalf("log %q missing %q", log, want)
 		}

@@ -27,6 +27,9 @@ func TestPage_Clamp(t *testing.T) {
 		{"/x?limit=abc", 0, 0, http.StatusBadRequest},
 		{"/x?offset=abc", 0, 0, http.StatusBadRequest},
 		{"/x?offset=-1", 0, 0, http.StatusBadRequest},
+		{"/x?offset=100000", 20, 100000, 0},
+		{"/x?offset=100001", 0, 0, http.StatusBadRequest},
+		{"/x?offset=4294967296", 0, 0, http.StatusBadRequest},
 	}
 	for _, tt := range tests {
 		t.Run(tt.target, func(t *testing.T) {

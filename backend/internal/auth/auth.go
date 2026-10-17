@@ -77,13 +77,15 @@ func middleware(v Verifier, required bool) func(http.Handler) http.Handler {
 			}
 			id, err := v.Verify(r.Context(), token)
 			if err != nil {
-				slog.Warn("auth: token verification failed",
-					"err", err,
-					"invalid_token", errors.Is(err, ErrInvalidToken),
-					"request_id", chimw.GetReqID(r.Context()))
 				if errors.Is(err, ErrInvalidToken) {
+					slog.Info("auth: token rejected",
+						"err", err,
+						"request_id", chimw.GetReqID(r.Context()))
 					httpx.Error(w, httpx.Unauthorized("invalid or expired token"))
 				} else {
+					slog.Warn("auth: token verification failed",
+						"err", err,
+						"request_id", chimw.GetReqID(r.Context()))
 					httpx.Error(w, errVerifierUnavailable)
 				}
 				return

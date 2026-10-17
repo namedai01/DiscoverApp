@@ -15,6 +15,7 @@ const maxBodyBytes = 1 << 20 // 1 MiB
 const (
 	defaultLimit = 20
 	maxLimit     = 100
+	maxOffset    = 100000
 )
 
 // APIError is an error that maps to a specific HTTP status and error code.
@@ -88,8 +89,8 @@ func Decode(r *http.Request, v any) error {
 }
 
 // Page parses limit and offset from the query string. limit defaults to 20
-// and is clamped to 1..100; offset defaults to 0. Non-integer values and a
-// negative offset are 400s.
+// and is clamped to 1..100; offset defaults to 0. Non-integer values, a
+// negative offset and an offset above 100000 are 400s.
 func Page(r *http.Request) (limit, offset int, err error) {
 	q := r.URL.Query()
 	limit = defaultLimit
@@ -102,8 +103,8 @@ func Page(r *http.Request) (limit, offset int, err error) {
 	}
 	if s := q.Get("offset"); s != "" {
 		offset, err = strconv.Atoi(s)
-		if err != nil || offset < 0 {
-			return 0, 0, BadRequest("offset must be a non-negative integer")
+		if err != nil || offset < 0 || offset > maxOffset {
+			return 0, 0, BadRequest("offset must be an integer from 0 to 100000")
 		}
 	}
 	return limit, offset, nil
