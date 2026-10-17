@@ -1,0 +1,9 @@
+allowBuilds:
+  '@firebase/util': false
+  '@tailwindcss/oxide': false
+  esbuild: true
+  protobufjs: false
+  sharp: true
+  unrs-resolver: false
+overrides:
+  '@grpc/grpc-js': 1.13.6

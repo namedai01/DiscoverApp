@@ -5,10 +5,9 @@ Monorepo for Memopin.
 ```
 apps/
   mobile/        Flutter app (package `memopin`)
+  web/           Next.js web client
 backend/         Go API (Postgres, Firebase Auth, FCM)
 ```
-
-Planned: `apps/web/` (web client). Add it as its own top-level project with its own README.
 
 ## Features
 
@@ -78,3 +77,14 @@ flutter run
 ```
 
 Requires Flutter 3.47+ (Dart 3.13+). See `apps/mobile/README.md`.
+
+## Web app
+
+```bash
+cd apps/web
+cp .env.example .env.local
+pnpm install
+pnpm dev      # http://localhost:3000, expects the backend on :8080
+```
+
+Next.js client for browsing places, posting stories, following people and the map. For development, run the backend with `AUTH_MODE=fake` and use the fake sign-in. See `apps/web/README.md` for the environment variables, commands, `pnpm e2e` and what a deploy needs.
