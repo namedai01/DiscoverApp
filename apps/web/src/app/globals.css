@@ -19,3 +19,13 @@ body {
     system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
 }
+
+/* Map marker (L.divIcon); same look as the mobile app's map pins. */
+.memopin-marker {
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border-radius: 9999px;
+  background: #d3d3d3;
+  border: 1.5px solid #0071bc;
+}
