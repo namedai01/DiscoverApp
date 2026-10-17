@@ -161,6 +161,63 @@ describe("createApi", () => {
     });
   });
 
+  it("hides backend developer messages on 5xx but keeps the code", async () => {
+    const internal = setup(() =>
+      json(errorBody("internal", "internal server error"), 500),
+    );
+    await expect(internal.api.getLocation("l1")).rejects.toMatchObject({
+      status: 500,
+      code: "internal",
+      message: "Server error (500). Try again.",
+    });
+
+    const unavailable = setup(() =>
+      json(errorBody("internal", "authentication temporarily unavailable"), 503),
+    );
+    await expect(unavailable.api.getLocation("l1")).rejects.toMatchObject({
+      status: 503,
+      code: "internal",
+      message: "Server error (503). Try again.",
+    });
+  });
+
+  it("uses a generic message for a 400 when saving", async () => {
+    const body = errorBody(
+      "bad_request",
+      "imageUrl must be an upload in your own storage folder",
+    );
+    const story = setup(() => json(body, 400), { getToken: async () => "t" });
+    await expect(
+      story.api.createStory({
+        title: "t",
+        type: "",
+        description: "",
+        imageUrl: "https://x/y.jpg",
+        lat: 1,
+        lng: 2,
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: "bad_request",
+      message: "Couldn't save. Check the fields and try again.",
+    });
+
+    const me = setup(() => json(body, 400), { getToken: async () => "t" });
+    await expect(me.api.updateMe({ displayName: "x" })).rejects.toMatchObject({
+      status: 400,
+      code: "bad_request",
+      message: "Couldn't save. Check the fields and try again.",
+    });
+
+    // Other 400s (e.g. following yourself) keep the server's message.
+    const follow = setup(() => json(errorBody("bad_request", "cannot follow yourself"), 400), {
+      getToken: async () => "t",
+    });
+    await expect(follow.api.follow("u1")).rejects.toMatchObject({
+      message: "cannot follow yourself",
+    });
+  });
+
   it("non-JSON 502", async () => {
     const { api } = setup(() => new Response("<html>bad gateway</html>", { status: 502 }));
     await expect(api.getLocation("l1")).rejects.toMatchObject({

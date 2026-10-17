@@ -72,7 +72,13 @@ function isAbort(e: unknown): boolean {
   );
 }
 
-async function toApiError(res: Response): Promise<ApiError> {
+const SAVE_FAILED = "Couldn't save. Check the fields and try again.";
+
+// Backend messages are developer-facing on 5xx ("internal server error") and
+// on a rejected save (the client validates first, so a 400 there means a
+// config problem such as a wrong storage bucket). Those get fixed copy; the
+// code from the body is kept. Other 4xx messages are written for the user.
+async function toApiError(res: Response, isSave: boolean): Promise<ApiError> {
   let body: unknown;
   try {
     body = JSON.parse(await res.text());
@@ -81,16 +87,23 @@ async function toApiError(res: Response): Promise<ApiError> {
   }
   const detail = (body as { error?: { code?: unknown; message?: unknown } })
     ?.error;
+  const serverError = res.status >= 500;
+  const serverMessage = `Server error (${res.status}). Try again.`;
   if (detail && typeof detail.message === "string" && detail.message) {
     const code: ApiErrorCode = isServerCode(detail.code)
       ? detail.code
       : "unknown";
+    if (serverError) return new ApiError(res.status, code, serverMessage);
+    if (isSave && res.status === 400) {
+      return new ApiError(res.status, code, SAVE_FAILED);
+    }
     return new ApiError(res.status, code, detail.message);
   }
   const code = codeFromStatus(res.status);
-  const message =
-    res.status >= 500
-      ? `Server error (${res.status}). Try again.`
+  const message = serverError
+    ? serverMessage
+    : isSave && res.status === 400
+      ? SAVE_FAILED
       : `Request failed (${res.status}).`;
   return new ApiError(res.status, code, message);
 }
@@ -150,7 +163,10 @@ export function createApi(opts: ApiOptions): Api {
       if (!fresh || res.status === 401) opts.onUnauthorized?.();
     }
 
-    if (!res.ok) throw await toApiError(res);
+    // Only POST /v1/stories and PATCH /v1/me are saves with a 400 to disguise.
+    if (!res.ok) {
+      throw await toApiError(res, method === "POST" || method === "PATCH");
+    }
     if (res.status === 204) return undefined as T;
     try {
       return (await res.json()) as T;
