@@ -15,6 +15,7 @@ import (
 	"github.com/namedai01/memopin/backend/internal/auth"
 	"github.com/namedai01/memopin/backend/internal/config"
 	"github.com/namedai01/memopin/backend/internal/db/store"
+	"github.com/namedai01/memopin/backend/internal/follows"
 	"github.com/namedai01/memopin/backend/internal/httpx"
 	"github.com/namedai01/memopin/backend/internal/locations"
 	"github.com/namedai01/memopin/backend/internal/users"
@@ -47,14 +48,19 @@ func NewRouter(d Deps) http.Handler {
 	q := store.New(d.Pool)
 	usersH := &users.Handler{Q: q, Bucket: d.Cfg.StorageBucket, DefaultPhotoURL: d.Cfg.DefaultUserPhotoURL}
 	locationsH := &locations.Handler{Q: q}
+	followsH := &follows.Handler{Q: q, DefaultPhotoURL: d.Cfg.DefaultUserPhotoURL}
 
 	r.Route("/v1", func(r chi.Router) {
 		r.Get("/locations", locationsH.List)
 		r.Get("/locations/{id}", locationsH.Get)
+		r.Get("/users", usersH.List)
 		r.Group(func(r chi.Router) {
 			r.Use(auth.Required(d.Verifier))
 			r.Get("/me", usersH.GetMe)
 			r.Patch("/me", usersH.PatchMe)
+			r.Get("/users/{id}", usersH.Get)
+			r.Put("/users/{id}/follow", followsH.Follow)
+			r.Delete("/users/{id}/follow", followsH.Unfollow)
 		})
 	})
 	return r

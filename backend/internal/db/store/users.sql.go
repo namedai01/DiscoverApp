@@ -48,6 +48,58 @@ func (q *Queries) GetUserWithStats(ctx context.Context, arg GetUserWithStatsPara
 	return i, err
 }
 
+const listUsers = `-- name: ListUsers :many
+SELECT u.id,
+       u.display_name,
+       u.photo_url,
+       count(f.follower_id)::bigint AS follower_count
+FROM users u
+LEFT JOIN follows f ON f.target_id = u.id
+WHERE $1::text IS NULL OR lower(u.display_name) LIKE $1::text ESCAPE '\'
+GROUP BY u.id
+ORDER BY follower_count DESC, lower(u.display_name), u.id
+LIMIT $3 OFFSET $2
+`
+
+type ListUsersParams struct {
+	Q   *string
+	Off int32
+	Lim int32
+}
+
+type ListUsersRow struct {
+	ID            string
+	DisplayName   string
+	PhotoUrl      *string
+	FollowerCount int64
+}
+
+// q, when set, is a pre-built pattern from httpx.LikePrefix.
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
+	rows, err := q.db.Query(ctx, listUsers, arg.Q, arg.Off, arg.Lim)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUsersRow
+	for rows.Next() {
+		var i ListUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.DisplayName,
+			&i.PhotoUrl,
+			&i.FollowerCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET display_name = COALESCE($1, display_name),
@@ -110,4 +162,15 @@ func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (User, e
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const userExists = `-- name: UserExists :one
+SELECT EXISTS (SELECT 1 FROM users WHERE id = $1)
+`
+
+func (q *Queries) UserExists(ctx context.Context, id string) (bool, error) {
+	row := q.db.QueryRow(ctx, userExists, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }

@@ -25,3 +25,19 @@ SELECT u.id,
        ) AS is_following
 FROM users u
 WHERE u.id = sqlc.arg('id');
+
+-- name: UserExists :one
+SELECT EXISTS (SELECT 1 FROM users WHERE id = $1);
+
+-- name: ListUsers :many
+-- q, when set, is a pre-built pattern from httpx.LikePrefix.
+SELECT u.id,
+       u.display_name,
+       u.photo_url,
+       count(f.follower_id)::bigint AS follower_count
+FROM users u
+LEFT JOIN follows f ON f.target_id = u.id
+WHERE sqlc.narg('q')::text IS NULL OR lower(u.display_name) LIKE sqlc.narg('q')::text ESCAPE '\'
+GROUP BY u.id
+ORDER BY follower_count DESC, lower(u.display_name), u.id
+LIMIT sqlc.arg('lim') OFFSET sqlc.arg('off');
