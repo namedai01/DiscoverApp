@@ -139,4 +139,64 @@ describe("usePagedList", () => {
     await waitFor(() => expect(result.current.items).toEqual([{ id: "n" }]));
     expect(result.current.error).toBeNull();
   });
+  it("drops a pending loadMore of a seeded list after the key changes", async () => {
+    const old = deferred<PageResult<Item>>();
+    const oldFetcher = vi.fn(() => old.promise);
+    const newPage = deferred<PageResult<Item>>();
+    const newFetcher = vi.fn(() => newPage.promise);
+    const initial: PageResult<Item> = { items: [{ id: "a" }], next: "c1" };
+    const { result, rerender } = renderHook(
+      ({ k }) =>
+        usePagedList<Item>(k === "k" ? oldFetcher : newFetcher, {
+          key: k,
+          initial: k === "k" ? initial : undefined,
+        }),
+      { initialProps: { k: "k" } },
+    );
+    act(() => result.current.loadMore());
+    expect(oldFetcher).toHaveBeenCalledWith("c1");
+
+    rerender({ k: "k2" });
+    expect(newFetcher).toHaveBeenCalledWith(null);
+    await act(async () => {
+      old.resolve({ items: [{ id: "old" }], next: "old-next" });
+    });
+    // The stale page neither merges, nor changes hasMore, nor frees the lock.
+    expect(result.current.items).toEqual([]);
+    expect(result.current.hasMore).toBe(false);
+    expect(result.current.loading).toBe(true);
+
+    await act(async () => {
+      newPage.resolve({ items: [{ id: "n1" }], next: "n-next" });
+    });
+    expect(result.current.items).toEqual([{ id: "n1" }]);
+    expect(result.current.hasMore).toBe(true);
+    expect(result.current.loading).toBe(false);
+  });
+
+  describe("in strict mode", () => {
+    it("does not fetch or double-seed when seeded", () => {
+      const fetcher = vi.fn(async () => ({ items: [{ id: "x" }], next: null }));
+      const initial: PageResult<Item> = { items: [{ id: "a" }], next: "c1" };
+      const { result } = renderHook(
+        () => usePagedList<Item>(fetcher, { key: "k", initial }),
+        { reactStrictMode: true },
+      );
+      expect(fetcher).not.toHaveBeenCalled();
+      expect(result.current.items).toEqual([{ id: "a" }]);
+      expect(result.current.hasMore).toBe(true);
+    });
+
+    it("ends with exactly one first page when unseeded", async () => {
+      const fetcher = vi.fn(async () => ({ items: [{ id: "a" }], next: null }));
+      const { result } = renderHook(
+        () => usePagedList<Item>(fetcher, { key: "k" }),
+        { reactStrictMode: true },
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.items).toEqual([{ id: "a" }]);
+      expect(result.current.hasMore).toBe(false);
+      expect(result.current.error).toBeNull();
+    });
+  });
 });

@@ -106,9 +106,12 @@ export function usePagedList<T extends { id: string }>(
   }, []);
 
   useEffect(() => {
-    if (seededKey.current === key) return;
-    seededKey.current = null;
-    fetchFirst(generation.current);
+    // The seeded key needs no fetch, but still invalidates on cleanup so a
+    // loadMore pending for it cannot land after the key changes.
+    if (seededKey.current !== key) {
+      seededKey.current = null;
+      fetchFirst(generation.current);
+    }
     return invalidate;
   }, [key, fetchFirst, invalidate]);
 
