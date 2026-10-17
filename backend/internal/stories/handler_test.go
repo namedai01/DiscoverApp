@@ -386,3 +386,23 @@ func TestStoryOwnerPhoto_DefaultAtRender(t *testing.T) {
 		}
 	}
 }
+
+func TestCreateStory_TextStoredAsNFC(t *testing.T) {
+	h, pool, _ := newHandler(t)
+	testutil.SeedLocation(t, pool, "Hanoi", 21.03, 105.85)
+	body := storyBody("u1", 21, 105)
+	body["title"], body["type"], body["description"] = "Ho\u0302\u0300", "Ca\u0302\u0301u", "Ba\u0300"
+
+	w := testutil.Do(t, h, "POST", "/v1/stories", "u1", body)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body)
+	}
+	var title, typ, desc string
+	err := pool.QueryRow(t.Context(), "SELECT title, type, description FROM stories").Scan(&title, &typ, &desc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if title != "H\u1ed3" || typ != "C\u1ea5u" || desc != "B\u00e0" {
+		t.Fatalf("stored = %q %q %q, want NFC", title, typ, desc)
+	}
+}

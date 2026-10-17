@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/namedai01/memopin/backend/internal/db/store"
 )
@@ -96,9 +97,9 @@ func validate(r row) (Location, error) {
 	}
 	return Location{
 		Key:           r.Key,
-		VenueName:     r.VenueName,
-		VenueLocation: r.VenueLocation,
-		Description:   r.Description,
+		VenueName:     norm.NFC.String(r.VenueName),
+		VenueLocation: norm.NFC.String(r.VenueLocation),
+		Description:   norm.NFC.String(r.Description),
 		ImageURL:      r.ImageURL,
 		Lat:           *r.Lat,
 		Lng:           *r.Lng,

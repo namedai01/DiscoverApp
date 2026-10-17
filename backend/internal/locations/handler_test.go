@@ -3,6 +3,7 @@ package locations_test
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -172,6 +173,22 @@ func TestGetLocation_NotFound(t *testing.T) {
 		w := testutil.Do(t, h, "GET", "/v1/locations/"+id, "", nil)
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("id %s: status = %d, body = %s", id, w.Code, w.Body)
+		}
+	}
+}
+
+func TestListLocations_DecomposedQueryMatchesComposedName(t *testing.T) {
+	pool := testutil.NewPool(t)
+	h := server.NewRouter(server.Deps{Pool: pool, Verifier: auth.Fake{}, Cfg: config.Config{}})
+	testutil.SeedLocation(t, pool, "H\u1ed3 G\u01b0\u01a1m", 21.0285, 105.8542) // stored NFC
+
+	for name, q := range map[string]string{
+		"NFD": url.QueryEscape("Ho\u0302\u0300"), // "H\u1ed3" decomposed
+		"NFC": url.QueryEscape("H\u1ed3"),
+	} {
+		got := list(t, h, "/v1/locations?q="+q)
+		if len(got) != 1 {
+			t.Errorf("%s query matched %v, want [H\u1ed3 G\u01b0\u01a1m]", name, names(got))
 		}
 	}
 }

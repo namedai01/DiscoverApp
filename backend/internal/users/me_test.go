@@ -266,3 +266,19 @@ func TestValidImageURL(t *testing.T) {
 		t.Fatal("empty uid must never validate")
 	}
 }
+
+func TestPatchMe_DisplayNameStoredAsNFC(t *testing.T) {
+	h, pool := newHandler(t)
+	nfd := "Ho\u0302\u0300 Nam" // decomposed "H\u1ed3 Nam"
+	w := testutil.Do(t, h, "PATCH", "/v1/me", "u1", map[string]string{"displayName": nfd})
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body)
+	}
+	var stored string
+	if err := pool.QueryRow(t.Context(), "SELECT display_name FROM users WHERE id = 'u1'").Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored != "H\u1ed3 Nam" {
+		t.Fatalf("stored display name = %q, want NFC %q", stored, "H\u1ed3 Nam")
+	}
+}

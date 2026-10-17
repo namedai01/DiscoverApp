@@ -159,3 +159,14 @@ func TestError_InternalLogsRequestID(t *testing.T) {
 		t.Fatalf("cause leaked: %s", w.Body)
 	}
 }
+
+func TestLikePrefix_NormalizesToNFC(t *testing.T) {
+	nfc := "H\u1ed3 G"        // precomposed
+	nfd := "Ho\u0302\u0300 G" // o + circumflex + grave
+	if nfc == nfd {
+		t.Fatal("test strings must differ in bytes")
+	}
+	if a, b := LikePrefix(nfd), LikePrefix(nfc); a != b {
+		t.Fatalf("LikePrefix(NFD) = %q, LikePrefix(NFC) = %q, want equal", a, b)
+	}
+}

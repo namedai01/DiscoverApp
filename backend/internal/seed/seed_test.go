@@ -191,3 +191,15 @@ func TestCommittedSeedFileLoads(t *testing.T) {
 		t.Fatalf("len = %d, want 3", len(locs))
 	}
 }
+
+func TestLoad_NormalizesTextToNFC(t *testing.T) {
+	in := `[{"key":"k","venueName":"Ho\u0302\u0300","venueLocation":"Ha\u0300 No\u0323\u0302i","description":"Ba\u0300","lat":1,"lng":2}]`
+	locs, err := seed.Load(strings.NewReader(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := locs[0]
+	if got.VenueName != "H\u1ed3" || got.VenueLocation != "H\u00e0 N\u1ed9i" || got.Description != "B\u00e0" {
+		t.Fatalf("got %q %q %q, want NFC", got.VenueName, got.VenueLocation, got.Description)
+	}
+}

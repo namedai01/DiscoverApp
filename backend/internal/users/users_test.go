@@ -3,6 +3,7 @@ package users_test
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -223,5 +224,14 @@ func TestDefaultPhotoAppliedAtRender(t *testing.T) {
 	w := testutil.Do(t, h, "GET", "/v1/me", "u4", nil)
 	if got := decodeUser(t, w.Body.Bytes())["photoUrl"]; got != defaultPhoto {
 		t.Errorf("me: photoUrl = %v, want %v", got, defaultPhoto)
+	}
+}
+
+func TestListUsers_DecomposedQueryMatchesComposedName(t *testing.T) {
+	h, pool := newHandler(t)
+	testutil.SeedUser(t, pool, "u1", "H\u1ed3 Nam") // stored NFC
+	got := listUsers(t, h, "/v1/users?q="+url.QueryEscape("Ho\u0302\u0300"))
+	if !sameIDs(userIDs(got), "u1") {
+		t.Fatalf("NFD query matched %v, want [u1]", userIDs(got))
 	}
 }

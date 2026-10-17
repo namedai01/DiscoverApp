@@ -7,6 +7,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"golang.org/x/text/unicode/norm"
+
 	"github.com/namedai01/memopin/backend/internal/auth"
 	"github.com/namedai01/memopin/backend/internal/db/store"
 	"github.com/namedai01/memopin/backend/internal/httpx"
@@ -83,7 +85,7 @@ func (h *Handler) PatchMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.DisplayName != nil {
-		name := strings.TrimSpace(*req.DisplayName)
+		name := norm.NFC.String(strings.TrimSpace(*req.DisplayName))
 		if n := utf8.RuneCountInString(name); n < 1 || n > maxDisplayNameRunes {
 			httpx.Error(w, r, httpx.BadRequest("displayName must be 1 to 50 characters"))
 			return

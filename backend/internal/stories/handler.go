@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/namedai01/memopin/backend/internal/auth"
 	"github.com/namedai01/memopin/backend/internal/db/store"
@@ -83,10 +84,13 @@ type createRequest struct {
 	Lng         *float64 `json:"lng"`
 }
 
-// validate checks the body and returns the title with surrounding space
-// trimmed.
-func (h *Handler) validate(req createRequest, uid string) (title string, err error) {
-	title = strings.TrimSpace(req.Title)
+// validate normalizes the text fields to NFC in place (so lengths count
+// characters as stored), checks the body and returns the title with
+// surrounding space trimmed.
+func (h *Handler) validate(req *createRequest, uid string) (title string, err error) {
+	req.Type = norm.NFC.String(req.Type)
+	req.Description = norm.NFC.String(req.Description)
+	title = norm.NFC.String(strings.TrimSpace(req.Title))
 	switch {
 	case title == "" || utf8.RuneCountInString(title) > maxTitleRunes:
 		return "", httpx.BadRequest("title must be 1 to 100 characters")
@@ -116,7 +120,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, err)
 		return
 	}
-	title, err := h.validate(req, caller.UID)
+	title, err := h.validate(&req, caller.UID)
 	if err != nil {
 		httpx.Error(w, r, err)
 		return
