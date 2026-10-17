@@ -28,7 +28,7 @@ func main() {
 
 func run() error {
 	file := flag.String("file", "seed/locations.json", "seed JSON file, relative to the working directory (backend/)")
-	dryRun := flag.Bool("dry-run", false, "apply inside a transaction, roll it back and print the counts")
+	dryRun := flag.Bool("dry-run", false, "apply the seed inside a transaction, roll it back and print the counts (schema migrations are still applied)")
 	flag.Parse()
 
 	dbURL := os.Getenv("DATABASE_URL")

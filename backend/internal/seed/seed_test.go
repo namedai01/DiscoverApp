@@ -135,6 +135,7 @@ func TestLoad_RejectsBadRows(t *testing.T) {
 	}{
 		{"missing key", `{"venueName":"V","lat":1,"lng":2}`, "row 1: key is required"},
 		{"blank key", `{"key":"  ","venueName":"V","lat":1,"lng":2}`, "row 1: key is required"},
+		{"key with surrounding whitespace", `{"key":" x ","venueName":"V","lat":1,"lng":2}`, "row 1: key must not have leading or trailing whitespace"},
 		{"duplicate key", `{"key":"ok","venueName":"V","lat":1,"lng":2}`, `row 1: duplicate key "ok"`},
 		{"lat 91", `{"key":"x","venueName":"V","lat":91,"lng":2}`, "row 1: lat out of range"},
 		{"lat -91", `{"key":"x","venueName":"V","lat":-91,"lng":2}`, "row 1: lat out of range"},

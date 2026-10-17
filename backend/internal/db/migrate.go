@@ -18,9 +18,10 @@ var migrations embed.FS
 
 // NewMigrator returns a goose provider over the embedded migrations. It holds
 // a Postgres session advisory lock while migrating, so several instances
-// starting at once (Cloud Run) apply the schema one after another. The lock
-// takes one connection and the migration another, so the pool needs at least
-// two. Close the provider when done; that does not close the pool.
+// starting at once (Cloud Run) apply the schema one after another. Goose runs
+// the migrations on the same connection that holds the lock, so the pool needs
+// only one free connection. Close the provider when done; that does not close
+// the pool.
 func NewMigrator(pool *pgxpool.Pool) (*goose.Provider, error) {
 	fsys, err := fs.Sub(migrations, "migrations")
 	if err != nil {

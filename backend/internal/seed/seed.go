@@ -81,6 +81,8 @@ func validate(r row) (Location, error) {
 	switch {
 	case strings.TrimSpace(r.Key) == "":
 		return Location{}, errors.New("key is required")
+	case r.Key != strings.TrimSpace(r.Key):
+		return Location{}, errors.New("key must not have leading or trailing whitespace")
 	case strings.TrimSpace(r.VenueName) == "":
 		return Location{}, errors.New("venueName is required")
 	case r.Lat == nil:
