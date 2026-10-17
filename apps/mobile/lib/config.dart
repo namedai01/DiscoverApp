@@ -4,6 +4,15 @@ import 'package:latlong2/latlong.dart';
 /// Runtime config read from the bundled `.env` (template: `.env.example`).
 /// Only valid after `dotenv.load()` in `main()`.
 abstract final class AppConfig {
+  /// Base URL of the Memopin API, e.g. `http://10.0.2.2:8080`. Required.
+  static String get apiBaseUrl {
+    final url = dotenv.maybeGet('API_BASE_URL');
+    if (url == null || url.trim().isEmpty) {
+      throw StateError('API_BASE_URL is missing in .env');
+    }
+    return url.trim();
+  }
+
   /// Avatar given to a user on first login.
   static String? get defaultUserPhotoUrl =>
       dotenv.maybeGet('DEFAULT_USER_PHOTO_URL');
