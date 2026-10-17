@@ -18,9 +18,10 @@ import { RemoteImage } from "./RemoteImage";
 const PHOTO_ERROR = "Couldn't upload the photo. Try again.";
 const NO_PLACES = "There are no places yet to attach your story to.";
 
-type Step = "locating" | "uploading" | "posting";
+type Step = "preparing" | "locating" | "uploading" | "posting";
 
 const STEP_TEXT: Record<Step, string> = {
+  preparing: "Preparing photo…",
   locating: "Finding your location…",
   uploading: "Uploading photo…",
   posting: "Posting…",
@@ -64,6 +65,8 @@ export function CreateStoryForm() {
   // The photo already uploaded, so a retry after a failed post doesn't leave
   // another orphan in Storage.
   const uploaded = useRef<{ file: File; url: string } | null>(null);
+  // The decoded JPEG, so a retry after a denied location doesn't decode again.
+  const prepared = useRef<{ file: File; image: Blob } | null>(null);
   const previewRef = useRef<string | null>(null);
 
   useEffect(
@@ -88,10 +91,19 @@ export function CreateStoryForm() {
     setError(null);
   }
 
-  async function uploadPhoto(photo: File, uid: string): Promise<string> {
+  // Validates, decodes and shrinks the photo. Needs no network, so it runs
+  // before the location prompt; the result is kept for a retry.
+  async function preparePhoto(photo: File): Promise<Blob> {
+    const cached = prepared.current;
+    if (cached && cached.file === photo) return cached.image;
+    const image = await prepareUpload(photo);
+    prepared.current = { file: photo, image };
+    return image;
+  }
+
+  async function uploadPhoto(photo: File, image: Blob, uid: string): Promise<string> {
     const cached = uploaded.current;
     if (cached && cached.file === photo) return cached.url;
-    const image = await prepareUpload(photo);
     let url: string;
     try {
       const upload = await getUploader();
@@ -114,11 +126,15 @@ export function CreateStoryForm() {
     busyRef.current = true;
     setError(null);
     try {
-      // Location first: a denial must not leave an uploaded photo behind.
+      // Decode first (no network, and a bad photo shouldn't ask for location),
+      // then locate, and only then upload: a location denial must not leave an
+      // uploaded photo behind.
+      setStep("preparing");
+      const image = await preparePhoto(file);
       setStep("locating");
       const { lat, lng } = await getCurrentPosition();
       setStep("uploading");
-      const imageUrl = await uploadPhoto(file, user.uid);
+      const imageUrl = await uploadPhoto(file, image, user.uid);
       setStep("posting");
       const story = await api.createStory({
         title: title.trim(),

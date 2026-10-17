@@ -65,7 +65,9 @@ beforeEach(() => {
 });
 
 describe("CreateStoryForm", () => {
-  it("locates, uploads and posts, then opens the place", async () => {
+  it("prepares, locates, uploads and posts, then opens the place", async () => {
+    const prepared = deferred<Blob>();
+    vi.mocked(prepareUpload).mockReturnValue(prepared.promise);
     const position = deferred<{ lat: number; lng: number }>();
     const uploaded = deferred<string>();
     const posted = deferred<ReturnType<typeof aStory>>();
@@ -75,7 +77,13 @@ describe("CreateStoryForm", () => {
     await fill();
     await submit();
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Finding your location…");
+    expect(await screen.findByRole("status")).toHaveTextContent("Preparing photo…");
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+    prepared.resolve(new Blob(["j"]));
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("Finding your location…"),
+    );
+    expect(upload).not.toHaveBeenCalled();
     position.resolve({ lat: 21.03, lng: 105.85 });
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent("Uploading photo…"),
@@ -136,6 +144,7 @@ describe("CreateStoryForm", () => {
     await submit();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(DENIED);
+    expect(prepareUpload).toHaveBeenCalledTimes(1);
     expect(getUploader).not.toHaveBeenCalled();
     expect(upload).not.toHaveBeenCalled();
     expect(createStory).not.toHaveBeenCalled();
@@ -152,7 +161,22 @@ describe("CreateStoryForm", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "This photo format isn't supported. Choose a JPEG or PNG.",
     );
+    // Decoding comes before locating, so a bad photo never asks for location.
+    expect(getCurrentPosition).not.toHaveBeenCalled();
     expect(createStory).not.toHaveBeenCalled();
+  });
+
+  it("does not prepare the photo again when retrying after a denied location", async () => {
+    vi.mocked(getCurrentPosition).mockRejectedValueOnce(new GeoError("denied"));
+    setup();
+    await fill();
+    await submit();
+    expect(await screen.findByRole("alert")).toHaveTextContent(DENIED);
+
+    await submit();
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    expect(prepareUpload).toHaveBeenCalledTimes(1);
+    expect(upload).toHaveBeenCalledTimes(1);
   });
 
   it("reuses the uploaded photo when posting again after a 422", async () => {
