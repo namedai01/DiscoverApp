@@ -20,11 +20,13 @@ import (
 	"github.com/namedai01/memopin/backend/internal/config"
 	"github.com/namedai01/memopin/backend/internal/db"
 	"github.com/namedai01/memopin/backend/internal/db/store"
+	"github.com/namedai01/memopin/backend/internal/logx"
 	"github.com/namedai01/memopin/backend/internal/notify"
 	"github.com/namedai01/memopin/backend/internal/server"
 )
 
 func main() {
+	slog.SetDefault(logx.New(os.Stdout))
 	if err := run(); err != nil {
 		slog.Error("fatal", "err", err)
 		os.Exit(1)
@@ -81,8 +83,9 @@ func run() error {
 	case <-ctx.Done():
 	}
 
+	// Cloud Run SIGKILLs the instance 10 s after SIGTERM.
 	slog.Info("shutting down")
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err

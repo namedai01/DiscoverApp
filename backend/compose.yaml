@@ -4,6 +4,8 @@ services:
     environment:
       APP_ENV: dev
       AUTH_MODE: fake
+      FIREBASE_PROJECT_ID: memopin-app
+      STORAGE_BUCKET: memopin-app.firebasestorage.app
       DATABASE_URL: postgres://memopin:memopin@db:5432/memopin?sslmode=disable
       CORS_ORIGINS: http://localhost:3000
     ports:

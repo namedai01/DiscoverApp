@@ -16,10 +16,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/namedai01/memopin/backend/internal/db"
+	"github.com/namedai01/memopin/backend/internal/logx"
 	"github.com/namedai01/memopin/backend/internal/seed"
 )
 
 func main() {
+	slog.SetDefault(logx.New(os.Stdout))
 	if err := run(); err != nil {
 		slog.Error("seed failed", "err", err)
 		os.Exit(1)
