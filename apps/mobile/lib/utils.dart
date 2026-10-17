@@ -1,10 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:path/path.dart';
 
-String getFormattedTimeDistanceToCurrent(Timestamp timestamp) {
-  Duration duration = DateTime.now().difference(timestamp.toDate());
-  int numDays = duration.inDays;
+/// Short "how long ago" label. [now] is injectable for tests; a [time] in the
+/// future (clock skew) reads as "Just now".
+String getFormattedTimeDistanceToCurrent(DateTime time, {DateTime? now}) {
+  final duration = (now ?? DateTime.now()).difference(time);
+  final numDays = duration.inDays;
   if (numDays >= 365) {
     return '${numDays ~/ 365}y';
   } else if (numDays >= 7) {
@@ -20,17 +20,8 @@ String getFormattedTimeDistanceToCurrent(Timestamp timestamp) {
   }
 }
 
-String getFormattedTimeStamp(Timestamp timestamp) {
-  DateTime dateTime = timestamp.toDate();
-  return DateFormat('MM/dd/yyyy hh:mma').format(dateTime);
-}
-
-String extractBasename(String path) {
-  return basename(path);
-}
-
-String unionName(String filename) {
-  return '${basenameWithoutExtension(filename)}_${Timestamp.fromDate(DateTime.now()).toString()}.${extension(filename)}';
+String getFormattedTimeStamp(DateTime time) {
+  return DateFormat('MM/dd/yyyy hh:mma').format(time.toLocal());
 }
 
 String formatFollower(int follower) {

@@ -1,64 +1,28 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:memopin/utils.dart';
 import 'package:flutter/material.dart';
-
-import '../const.dart';
+import 'package:memopin/api/models.dart';
+import 'package:memopin/components/net_image.dart';
+import 'package:memopin/utils.dart';
 
 //Shows ListTile kind of Custom Widget to display Stories.
-class ListCard extends StatefulWidget {
-  final String storyImage;
-  final String storyTitle;
-  final Timestamp storyTime;
-  final String storyType;
-  final String locationID;
+class ListCard extends StatelessWidget {
+  final Story story;
 
-  ListCard({
-    super.key,
-    required this.storyImage,
-    required this.storyTitle,
-    required this.storyTime,
-    required this.storyType,
-    required this.locationID,
-  });
-
-  @override
-  State<ListCard> createState() => _ListCardState();
-}
-
-class _ListCardState extends State<ListCard> {
-  final FirebaseFirestore firestore = FirebaseFirestore.instance;
-  String locationName = "";
-  @override
-  void initState() {
-    super.initState();
-    firestore
-        .collection(locationCollectionPath)
-        .doc(widget.locationID)
-        .get()
-        .then((value) {
-          if (value.exists && mounted) {
-            // logger.d("user_stories_timeline.dart", value["venueName"]);
-            setState(() {
-              locationName = value["venueName"];
-            });
-          }
-        });
-  }
+  const ListCard({super.key, required this.story});
 
   @override
   Widget build(BuildContext context) {
+    final image = imageOrNull(story.imageUrl);
     return Row(
       children: <Widget>[
         Hero(
-          tag: 'HeroTag ' + widget.storyTitle,
+          tag: 'HeroTag ' + story.id,
           child: Container(
             height: 80,
             width: 80,
             decoration: BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage(widget.storyImage),
-                fit: BoxFit.cover,
-              ),
+              image: image == null
+                  ? null
+                  : DecorationImage(image: image, fit: BoxFit.cover),
               borderRadius: BorderRadius.circular(9),
               color: Colors.grey[300],
             ),
@@ -82,7 +46,7 @@ class _ListCardState extends State<ListCard> {
                       ),
                     ),
                     TextSpan(
-                      text: widget.storyTitle,
+                      text: story.title,
                       style: TextStyle(fontSize: 15),
                     ),
                   ],
@@ -105,7 +69,7 @@ class _ListCardState extends State<ListCard> {
                       ),
                     ),
                     TextSpan(
-                      text: locationName,
+                      text: story.venueName,
                       style: TextStyle(fontSize: 15),
                     ),
                   ],
@@ -128,9 +92,9 @@ class _ListCardState extends State<ListCard> {
                     ),
                     TextSpan(
                       text:
-                          getFormattedTimeDistanceToCurrent(widget.storyTime) +
+                          getFormattedTimeDistanceToCurrent(story.createdAt) +
                           ' . ' +
-                          widget.storyType,
+                          story.type,
                       style: TextStyle(
                         fontFamily: 'OpenSans',
                         fontWeight: FontWeight.w600,
@@ -141,18 +105,6 @@ class _ListCardState extends State<ListCard> {
                   ],
                 ),
               ),
-              // child: Text(
-              //   getFormattedTimeDistanceToCurrent(widget.storyTime) +
-              //       '  .  ' +
-              //       widget.storyType,
-              //   textAlign: TextAlign.left,
-              //   style: TextStyle(
-              //     fontFamily: 'OpenSans',
-              //     fontWeight: FontWeight.w600,
-              //     fontSize: 14,
-              //     color: Color(0xffacacac),
-              //   ),
-              // ),
             ),
           ],
         ),
