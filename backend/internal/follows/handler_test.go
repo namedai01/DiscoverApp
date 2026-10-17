@@ -141,7 +141,7 @@ func TestFollow_CreatesCallerRow(t *testing.T) {
 	if err := pool.QueryRow(t.Context(), "SELECT display_name FROM users WHERE id = 'u1'").Scan(&name); err != nil {
 		t.Fatal(err)
 	}
-	if name != "user +84900000001" {
+	if name != "user u1" {
 		t.Fatalf("display_name = %q", name)
 	}
 	if n := countFollows(t, pool); n != 1 {

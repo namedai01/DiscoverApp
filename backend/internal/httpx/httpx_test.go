@@ -120,3 +120,17 @@ func TestLikePrefix(t *testing.T) {
 		}
 	}
 }
+
+func TestJSON_ContentTypeUTF8(t *testing.T) {
+	const want = "application/json; charset=utf-8"
+	w := httptest.NewRecorder()
+	JSON(w, http.StatusOK, map[string]string{"name": "Hồ"})
+	if got := w.Header().Get("Content-Type"); got != want {
+		t.Fatalf("success Content-Type = %q, want %q", got, want)
+	}
+	w = httptest.NewRecorder()
+	Error(w, NotFound("gone"))
+	if got := w.Header().Get("Content-Type"); got != want {
+		t.Fatalf("error Content-Type = %q, want %q", got, want)
+	}
+}

@@ -88,7 +88,7 @@ func TestCreateStory_PicksNearestLocation(t *testing.T) {
 	if got.Location.ID != danang.String() || got.Location.VenueName != "Da Nang" {
 		t.Errorf("location = %+v, want Da Nang %s", got.Location, danang)
 	}
-	if got.Owner.ID != "u1" || got.Owner.DisplayName != "user +84900000001" || got.Owner.PhotoURL != "https://example.test/default.png" {
+	if got.Owner.ID != "u1" || got.Owner.DisplayName != "user u1" || got.Owner.PhotoURL != "https://example.test/default.png" {
 		t.Errorf("owner = %+v (caller row should be created on the fly)", got.Owner)
 	}
 	if _, err := uuid.Parse(got.ID); err != nil || got.Title != "Sunset" || got.Type != "photo" ||

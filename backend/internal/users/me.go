@@ -12,7 +12,10 @@ import (
 	"github.com/namedai01/memopin/backend/internal/httpx"
 )
 
-const maxDisplayNameRunes = 50
+const (
+	maxDisplayNameRunes = 50
+	defaultNameUIDChars = 6
+)
 
 // Handler serves /v1/me. DefaultPhotoURL seeds the photo of new users.
 type Handler struct {
@@ -31,17 +34,14 @@ type UserJSON struct {
 }
 
 // Ensure returns the caller's user row, creating it on first sight with the
-// display name "user <phone>" (or "user" without a phone) and the default
-// photo. An existing row is returned untouched, so renames survive. Handlers
-// that write rows referencing the caller call it first.
+// display name "user <first 6 chars of uid>" and the default photo. The phone
+// is stored but never put in the name, since names are shown publicly. An
+// existing row is returned untouched, so renames survive. Handlers that write
+// rows referencing the caller call it first.
 func Ensure(ctx context.Context, q *store.Queries, id auth.Identity, defaultPhoto string) (store.User, error) {
-	name := "user"
-	if id.Phone != "" {
-		name = "user " + id.Phone
-	}
 	return q.UpsertUser(ctx, store.UpsertUserParams{
 		ID:          id.UID,
-		DisplayName: name,
+		DisplayName: "user " + id.UID[:min(len(id.UID), defaultNameUIDChars)],
 		PhotoUrl:    nonEmpty(defaultPhoto),
 		Phone:       nonEmpty(id.Phone),
 	})

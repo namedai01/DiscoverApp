@@ -76,7 +76,7 @@ func TestGetMe_CreatesOnFirstCall(t *testing.T) {
 		t.Fatalf("status = %d, body = %s", w.Code, w.Body)
 	}
 	got := decodeUser(t, w.Body.Bytes())
-	if got["id"] != "u1" || got["displayName"] != "user +84900000001" || got["photoUrl"] != defaultPhoto {
+	if got["id"] != "u1" || got["displayName"] != "user u1" || got["photoUrl"] != defaultPhoto {
 		t.Fatalf("profile = %v", got)
 	}
 	if got["followerCount"] != float64(0) {
@@ -102,14 +102,22 @@ func TestGetMe_CreatesOnFirstCall(t *testing.T) {
 	}
 }
 
-func TestGetMe_NoPhoneDefaultsToUser(t *testing.T) {
+func TestGetMe_DefaultNameHasNoPhone(t *testing.T) {
 	h, _ := newHandler(t)
-	w := testutil.Do(t, h, "GET", "/v1/me", "u9", nil)
+	w := testutil.DoToken(t, h, "GET", "/v1/me", "fake:abcdefgh123:+84900000001", nil)
 	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d", w.Code)
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body)
 	}
-	if name := decodeUser(t, w.Body.Bytes())["displayName"]; name != "user" {
-		t.Fatalf("displayName = %v, want user", name)
+	if strings.Contains(w.Body.String(), "84900000001") {
+		t.Fatalf("phone leaked in body: %s", w.Body)
+	}
+	if name := decodeUser(t, w.Body.Bytes())["displayName"]; name != "user abcdef" {
+		t.Fatalf("displayName = %v, want user abcdef", name)
+	}
+
+	w = testutil.Do(t, h, "GET", "/v1/me", "u1", nil)
+	if name := decodeUser(t, w.Body.Bytes())["displayName"]; name != "user u1" {
+		t.Fatalf("short uid displayName = %v, want user u1", name)
 	}
 }
 

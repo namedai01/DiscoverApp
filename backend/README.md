@@ -90,7 +90,7 @@ Identity comes only from `Authorization: Bearer <Firebase ID token>`. A missing,
 | Method + path | Auth | Purpose |
 |---|---|---|
 | `GET /healthz` | none | 200 `{"status":"ok"}`, 503 if a fresh DB ping fails |
-| `GET /v1/me` | required | Own profile; creates it on first call (`displayName` defaults to `user <phone>`) |
+| `GET /v1/me` | required | Own profile; creates it on first call (`displayName` defaults to `user <first 6 chars of uid>`; the phone is never shown) |
 | `PATCH /v1/me` | required | Update `displayName` and/or `photoUrl` |
 | `GET /v1/locations?q=&limit=&offset=` | none | Places with story counts; `q` is a case-insensitive name prefix |
 | `GET /v1/locations/{id}` | none | Place details |
