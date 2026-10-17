@@ -1,0 +1,29 @@
+[
+  {
+    "key": "ho-hoan-kiem",
+    "venueName": "Hồ Hoàn Kiếm",
+    "venueLocation": "Hoàn Kiếm, Hà Nội",
+    "description": "Hồ Gươm giữa lòng Hà Nội, gắn với truyền thuyết trả gươm thần. Ven hồ có Tháp Rùa và đền Ngọc Sơn, buổi sáng và cuối tuần phố đi bộ rất nhộn nhịp.",
+    "imageUrl": "",
+    "lat": 21.0288,
+    "lng": 105.8525
+  },
+  {
+    "key": "cau-rong",
+    "venueName": "Cầu Rồng",
+    "venueLocation": "Sơn Trà, Đà Nẵng",
+    "description": "Cây cầu bắc qua sông Hàn có hình con rồng thép. Tối thứ Bảy và Chủ nhật, rồng phun lửa và phun nước lúc 21 giờ.",
+    "imageUrl": "",
+    "lat": 16.0611,
+    "lng": 108.2272
+  },
+  {
+    "key": "ba-na-hills",
+    "venueName": "Bà Nà Hills",
+    "venueLocation": "Hòa Vang, Đà Nẵng",
+    "description": "Khu du lịch trên đỉnh núi Chúa, cao khoảng 1.500 m, khí hậu mát quanh năm. Nổi tiếng với cáp treo, Cầu Vàng và làng Pháp.",
+    "imageUrl": "",
+    "lat": 15.9977,
+    "lng": 107.9886
+  }
+]
