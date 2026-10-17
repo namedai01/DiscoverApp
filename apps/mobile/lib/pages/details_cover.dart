@@ -12,7 +12,7 @@ class DetailsCover extends StatelessWidget {
   Widget build(BuildContext context) {
     final image = imageOrNull(location.imageUrl);
     return Hero(
-      tag: location.venueName + 'MainCard',
+      tag: 'MainCard ${location.id}',
       child: Container(
         height: MediaQuery.of(context).size.height,
         padding: EdgeInsets.symmetric(horizontal: 35),

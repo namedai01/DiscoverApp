@@ -31,7 +31,7 @@ class UserCard extends StatelessWidget {
       child: Row(
         children: <Widget>[
           Hero(
-            tag: 'HeroTag ${user.displayName}',
+            tag: 'HeroTag ${user.id}',
             child: Container(
               height: 70,
               width: 70,

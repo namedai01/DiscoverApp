@@ -25,7 +25,7 @@ class MainCard extends StatelessWidget {
         );
       },
       child: Hero(
-        tag: location.venueName + 'MainCard',
+        tag: 'MainCard ${location.id}',
         child: Container(
           width: MediaQuery.of(context).size.width - 60,
           padding: EdgeInsets.symmetric(horizontal: 35),
