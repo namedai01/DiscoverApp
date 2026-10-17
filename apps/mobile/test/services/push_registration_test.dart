@@ -33,12 +33,15 @@ void main() {
   PushRegistration make({
     Future<String?> Function()? fcmToken,
     Future<http.Response> Function(http.Request req)? onDevice,
+    Future<http.Response> Function()? onMe,
     Duration signOutTimeout = const Duration(seconds: 5),
   }) {
     final api = fakeApi((req) {
       calls.add('${req.method} ${req.url.path}');
       bodies.add(req.body.isEmpty ? null : jsonDecode(req.body));
-      if (req.method == 'GET') return Future.value(jsonResponse(_me));
+      if (req.method == 'GET') {
+        return onMe != null ? onMe() : Future.value(jsonResponse(_me));
+      }
       return onDevice != null
           ? onDevice(req)
           : Future.value(http.Response('', 204));
@@ -149,5 +152,60 @@ void main() {
     await reg.onSignedIn();
     await reg.beforeSignOut().timeout(const Duration(seconds: 1));
     expect(calls.last, 'DELETE /v1/me/devices/t%3A1');
+  });
+
+  test('beforeSignOut during an in-flight onSignedIn leaves no registered '
+      'token', () async {
+    final me = Completer<http.Response>();
+    final reg = make(onMe: () => me.future);
+    final signIn = reg.onSignedIn();
+    await reg.beforeSignOut();
+    me.complete(jsonResponse(_me));
+    final user = await signIn;
+    expect(user.id, 'u1');
+    expect(calls, ['GET /v1/me']);
+
+    await reg.onTokenRefresh('t:2');
+    expect(calls, ['GET /v1/me']);
+  });
+
+  test('beforeSignOut while the token lookup is in flight skips the POST',
+      () async {
+    final token = Completer<String?>();
+    final reg = make(fcmToken: () => token.future);
+    final signIn = reg.onSignedIn();
+    await pumpEventQueue();
+    await reg.beforeSignOut();
+    token.complete('t:1');
+    await signIn;
+    expect(calls, ['GET /v1/me']);
+  });
+
+  test('beforeSignOut during an in-flight onTokenRefresh leaves no '
+      'registered token', () async {
+    final slowPost = Completer<http.Response>();
+    var posts = 0;
+    final reg = make(
+      onDevice: (req) {
+        if (req.method == 'POST' && ++posts == 2) return slowPost.future;
+        return Future.value(http.Response('', 204));
+      },
+    );
+    await reg.onSignedIn();
+    calls.clear();
+
+    final refresh = reg.onTokenRefresh('t:2');
+    await pumpEventQueue();
+    await reg.beforeSignOut();
+    slowPost.complete(http.Response('', 204));
+    await refresh;
+
+    // The POST landed after sign-out began, so it is deleted again.
+    expect(calls, [
+      'POST /v1/me/devices',
+      'DELETE /v1/me/devices/t%3A2',
+      'DELETE /v1/me/devices/t%3A2',
+    ]);
+    expect(calls.last, startsWith('DELETE'));
   });
 }

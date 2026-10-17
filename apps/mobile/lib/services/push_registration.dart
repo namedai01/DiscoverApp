@@ -25,13 +25,19 @@ class PushRegistration {
   bool _signedIn = false;
   String? _lastToken;
 
+  /// Bumped by [beforeSignOut]. A sign-in or refresh that started under an
+  /// older epoch must not register the device for the user who just left.
+  int _epoch = 0;
+
   /// Loads the profile (errors propagate), then registers this device.
   Future<AppUser> onSignedIn() async {
+    final epoch = _epoch;
     final user = await _api.getMe();
+    if (epoch != _epoch) return user;
     _signedIn = true;
     try {
       final token = await _fcmToken();
-      if (token != null) await _register(token);
+      if (token != null && epoch == _epoch) await _register(token, epoch);
     } catch (e) {
       debugPrint('push: token lookup failed: $e');
     }
@@ -41,24 +47,20 @@ class PushRegistration {
   /// Registers a rotated FCM token; ignored while signed out.
   Future<void> onTokenRefresh(String token) async {
     if (!_signedIn) return;
-    await _register(token);
+    await _register(token, _epoch);
   }
 
   /// Unregisters this device so the next user of the phone gets no pushes.
   /// Never throws and never takes longer than [signOutTimeout].
   Future<void> beforeSignOut() async {
     final token = _lastToken;
+    _epoch++;
     _signedIn = false;
     _lastToken = null;
-    if (token == null) return;
-    try {
-      await _api.unregisterDevice(token).timeout(signOutTimeout);
-    } catch (e) {
-      debugPrint('push: unregister failed: $e');
-    }
+    if (token != null) await _unregister(token);
   }
 
-  Future<void> _register(String token) async {
+  Future<void> _register(String token, int epoch) async {
     // Remember it even if the POST fails: the server may have stored it and
     // only the response was lost, so sign-out should still try to delete it.
     _lastToken = token;
@@ -66,6 +68,17 @@ class PushRegistration {
       await _api.registerDevice(token, _platform);
     } catch (e) {
       debugPrint('push: register failed: $e');
+    }
+    // Signed out while the POST was in flight: the server may have processed
+    // it after sign-out's DELETE, so delete again.
+    if (epoch != _epoch) await _unregister(token);
+  }
+
+  Future<void> _unregister(String token) async {
+    try {
+      await _api.unregisterDevice(token).timeout(signOutTimeout);
+    } catch (e) {
+      debugPrint('push: unregister failed: $e');
     }
   }
 }

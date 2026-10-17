@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -15,35 +16,45 @@ final FlutterLocalNotificationsPlugin _localNotifications =
 
 /// Sets up push: permission, the Android channel and the tap handlers.
 ///
-/// Push is best effort, so nothing here may stop the app from starting.
+/// Push is best effort: every step is guarded on its own, and nothing here may
+/// stop the app from starting (or wait on the permission prompt).
 Future<void> initPush(PushRegistration reg) async {
   final messaging = FirebaseMessaging.instance;
 
-  try {
-    await _initLocalNotifications();
-    // Also covers the Android 13+ POST_NOTIFICATIONS permission.
-    await messaging.requestPermission();
-    // iOS shows foreground pushes itself; Android needs the local copy below.
-    await messaging.setForegroundNotificationPresentationOptions(
+  // Not awaited: the user may leave the prompt open. Also covers the
+  // Android 13+ POST_NOTIFICATIONS permission.
+  unawaited(
+    _guarded('permission', () async {
+      await messaging.requestPermission();
+    }),
+  );
+  // iOS shows foreground pushes itself; Android needs the local copy below.
+  await _guarded('presentation options', () {
+    return messaging.setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
       sound: true,
     );
-  } catch (e) {
-    debugPrint('push: setup failed: $e');
+  });
+  if (Platform.isAndroid) {
+    // Only Android shows foreground pushes through local notifications; iOS
+    // would need DarwinInitializationSettings and its own permission prompt.
+    await _guarded('local notifications', _initLocalNotifications);
   }
 
-  // firebase_messaging 17 deprecates this in favour of onRegistered, which
-  // yields a Firebase Installation ID, not the FCM token the backend sends to.
-  // ignore: deprecated_member_use
-  messaging.onTokenRefresh.listen(
-    (token) => reg.onTokenRefresh(token),
-    onError: (Object e) => debugPrint('push: token refresh failed: $e'),
-  );
-  FirebaseMessaging.onMessage.listen(_showForeground);
-  FirebaseMessaging.onMessageOpenedApp.listen(_openFromMessage);
+  await _guarded('listeners', () async {
+    // firebase_messaging 17 deprecates this in favour of onRegistered, which
+    // yields a Firebase Installation ID, not the FCM token the backend sends to.
+    // ignore: deprecated_member_use
+    messaging.onTokenRefresh.listen(
+      (token) => reg.onTokenRefresh(token),
+      onError: (Object e) => debugPrint('push: token refresh failed: $e'),
+    );
+    FirebaseMessaging.onMessage.listen(_showForeground);
+    FirebaseMessaging.onMessageOpenedApp.listen(_openFromMessage);
+  });
 
-  try {
+  await _guarded('initial message', () async {
     final initial = await messaging.getInitialMessage();
     if (initial != null) {
       // The navigator only exists once the first frame is built.
@@ -51,8 +62,14 @@ Future<void> initPush(PushRegistration reg) async {
         (_) => _openFromMessage(initial),
       );
     }
+  });
+}
+
+Future<void> _guarded(String step, FutureOr<void> Function() run) async {
+  try {
+    await run();
   } catch (e) {
-    debugPrint('push: initial message failed: $e');
+    debugPrint('push: $step failed: $e');
   }
 }
 
