@@ -27,7 +27,7 @@ const (
 	maxTitleRunes       = 100
 	maxTypeRunes        = 50
 	maxDescriptionRunes = 2000
-	notifyTimeout       = 10 * time.Second
+	notifyTimeout       = 5 * time.Second
 )
 
 // Handler serves /v1/stories and the per-location and per-user story lists.
@@ -149,20 +149,27 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// The story is stored; push delivery must not delay or fail the response,
-	// nor die with the request context.
-	go func(ctx context.Context, id uuid.UUID) {
-		defer func() {
-			if rec := recover(); rec != nil {
-				slog.Error("notify panic", "story_id", id, "panic", rec)
-			}
-		}()
-		ctx, cancel := context.WithTimeout(ctx, notifyTimeout)
-		defer cancel()
-		h.Notifier.StoryCreated(ctx, id)
-	}(context.WithoutCancel(ctx), row.ID)
+	// The story is stored. Push delivery runs before the response (a Cloud
+	// Run instance may be throttled or stopped once it is sent) but can never
+	// change it: it is bounded, detached from the client's cancellation, and
+	// its failures and panics are only logged.
+	h.notify(r.Context(), row.ID)
 
 	httpx.JSON(w, http.StatusCreated, toJSON(storyRow(row)))
+}
+
+// notify tells the Notifier about a stored story, synchronously, with a
+// notifyTimeout deadline that survives the request being cancelled. A panic
+// is logged and swallowed.
+func (h *Handler) notify(ctx context.Context, id uuid.UUID) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			slog.Error("notify panic", "story_id", id, "panic", rec)
+		}
+	}()
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), notifyTimeout)
+	defer cancel()
+	h.Notifier.StoryCreated(ctx, id)
 }
 
 // ListByLocation returns a location's stories, newest first. It is public;

@@ -100,7 +100,7 @@ Identity comes only from `Authorization: Bearer <Firebase ID token>`. A missing,
 | `GET /v1/users/{id}/stories?cursor=&limit=` | required, self or follower | A user's timeline; 403 for non-followers |
 | `PUT /v1/users/{id}/follow` | required | Follow (idempotent, 204) |
 | `DELETE /v1/users/{id}/follow` | required | Unfollow (idempotent, 204) |
-| `POST /v1/stories` | required | Create a story; the server attaches the nearest place from `lat`/`lng`. `imageUrl` must be in the caller's uploads folder. Notifies followers by push |
+| `POST /v1/stories` | required | Create a story; the server attaches the nearest place from `lat`/`lng`. `imageUrl` must be in the caller's uploads folder. Notifies followers by push before responding (bounded to 5 s; a push failure never changes the 201) |
 | `POST /v1/me/devices` | required | Register an FCM token (`token`, `platform`) |
 | `DELETE /v1/me/devices/{token}` | required | Remove an FCM token |
 

@@ -8,7 +8,8 @@ import (
 )
 
 // Notifier is told about events worth a push notification. Implementations
-// must not panic and should log their own failures: callers fire and forget.
+// must not panic and should log their own failures. Callers invoke them
+// synchronously, with a short deadline, and ignore any outcome.
 type Notifier interface {
 	StoryCreated(ctx context.Context, storyID uuid.UUID)
 }

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -25,15 +24,22 @@ const bucket = "test-bucket"
 
 func TestMain(m *testing.M) { os.Exit(testutil.RunMain(m)) }
 
-// fakeNotifier reports every StoryCreated call on a channel.
-type fakeNotifier struct{ calls chan uuid.UUID }
+// fakeNotifier records every StoryCreated call. The handler calls it
+// synchronously, so no locking is needed once the response has returned.
+type fakeNotifier struct {
+	calls    []uuid.UUID
+	deadline time.Time // deadline of the last call's context
+}
 
-func (f *fakeNotifier) StoryCreated(_ context.Context, id uuid.UUID) { f.calls <- id }
+func (f *fakeNotifier) StoryCreated(ctx context.Context, id uuid.UUID) {
+	f.calls = append(f.calls, id)
+	f.deadline, _ = ctx.Deadline()
+}
 
 func newHandler(t *testing.T) (http.Handler, *pgxpool.Pool, *fakeNotifier) {
 	t.Helper()
 	pool := testutil.NewPool(t)
-	n := &fakeNotifier{calls: make(chan uuid.UUID, 10)}
+	n := &fakeNotifier{}
 	h := server.NewRouter(server.Deps{
 		Pool:     pool,
 		Verifier: auth.Fake{},
@@ -110,10 +116,8 @@ func TestCreateStory_NoLocations(t *testing.T) {
 	if err := pool.QueryRow(t.Context(), "SELECT count(*) FROM users").Scan(&users); err != nil || users != 0 {
 		t.Fatalf("users = %d (err %v), want 0: a 422 must write nothing", users, err)
 	}
-	select {
-	case id := <-n.calls:
-		t.Fatalf("notifier called for rejected story %s", id)
-	default:
+	if len(n.calls) != 0 {
+		t.Fatalf("notifier called for rejected story %v", n.calls)
 	}
 }
 
@@ -160,10 +164,8 @@ func TestCreateStory_Validation(t *testing.T) {
 	if err := pool.QueryRow(t.Context(), "SELECT count(*) FROM users").Scan(&users); err != nil || users != 0 {
 		t.Fatalf("users = %d (err %v), want 0: validation must precede any write", users, err)
 	}
-	select {
-	case id := <-n.calls:
-		t.Fatalf("notifier called for rejected story %s", id)
-	default:
+	if len(n.calls) != 0 {
+		t.Fatalf("notifier called for rejected story %v", n.calls)
 	}
 }
 
@@ -187,76 +189,41 @@ func TestCreateStory_NotifiesOnce(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case id := <-n.calls:
-		if id.String() != got.ID {
-			t.Fatalf("notified %s, want %s", id, got.ID)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("notifier not called")
+	if len(n.calls) != 1 || n.calls[0].String() != got.ID {
+		t.Fatalf("notified %v, want exactly [%s] before the response returned", n.calls, got.ID)
 	}
-	select {
-	case id := <-n.calls:
-		t.Fatalf("notifier called twice (second: %s)", id)
-	case <-time.After(100 * time.Millisecond):
+	if n.deadline.IsZero() || time.Until(n.deadline) > 5*time.Second {
+		t.Fatalf("notifier ctx deadline = %v, want within 5s", n.deadline)
 	}
 }
 
-// panickingNotifier panics on every call and signals that it was reached.
-type panickingNotifier struct{ called chan struct{} }
+// panickingNotifier panics on every call.
+type panickingNotifier struct{}
 
-func (p panickingNotifier) StoryCreated(context.Context, uuid.UUID) {
-	p.called <- struct{}{}
-	panic("boom")
-}
-
-// syncBuffer is a bytes.Buffer safe for the notify goroutine and the test.
-type syncBuffer struct {
-	mu sync.Mutex
-	b  bytes.Buffer
-}
-
-func (s *syncBuffer) Write(p []byte) (int, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.b.Write(p)
-}
-
-func (s *syncBuffer) String() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.b.String()
-}
+func (panickingNotifier) StoryCreated(context.Context, uuid.UUID) { panic("boom") }
 
 func TestCreateStory_NotifierPanicIsContained(t *testing.T) {
 	pool := testutil.NewPool(t)
-	n := panickingNotifier{called: make(chan struct{}, 1)}
 	h := server.NewRouter(server.Deps{
-		Pool: pool, Verifier: auth.Fake{}, Notifier: n,
+		Pool: pool, Verifier: auth.Fake{}, Notifier: panickingNotifier{},
 		Cfg: config.Config{AuthMode: "fake", StorageBucket: bucket},
 	})
 	testutil.SeedLocation(t, pool, "Hanoi", 21.03, 105.85)
 
-	logs := &syncBuffer{}
+	var logs bytes.Buffer
 	prev := slog.Default()
-	slog.SetDefault(slog.New(slog.NewTextHandler(logs, nil)))
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
 	t.Cleanup(func() { slog.SetDefault(prev) })
 
 	w := testutil.Do(t, h, "POST", "/v1/stories", "u1", storyBody("u1", 21, 105))
 	if w.Code != http.StatusCreated {
 		t.Fatalf("status = %d, body = %s", w.Code, w.Body)
 	}
-	select {
-	case <-n.called:
-	case <-time.After(5 * time.Second):
-		t.Fatal("notifier not called")
+	if c := countStories(t, pool); c != 1 {
+		t.Fatalf("stories = %d, want 1", c)
 	}
-	deadline := time.Now().Add(5 * time.Second)
-	for !strings.Contains(logs.String(), "notify panic") {
-		if time.Now().After(deadline) {
-			t.Fatalf("panic not logged; logs: %s", logs.String())
-		}
-		time.Sleep(10 * time.Millisecond)
+	if !strings.Contains(logs.String(), "notify panic") {
+		t.Fatalf("panic not logged; logs: %s", logs.String())
 	}
 }
 
