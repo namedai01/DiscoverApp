@@ -48,6 +48,9 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   Widget _results(AsyncSnapshot<List<Location>> snapshot) {
+    if (snapshot.connectionState != ConnectionState.done) {
+      return Center(child: CircularProgressIndicator());
+    }
     final error = snapshot.error;
     if (error != null) {
       final message = error is ApiException
@@ -65,9 +68,6 @@ class _ExplorePageState extends State<ExplorePage> {
           ],
         ),
       );
-    }
-    if (snapshot.connectionState != ConnectionState.done) {
-      return Center(child: CircularProgressIndicator());
     }
     final locations = snapshot.data ?? const <Location>[];
     return locations.isEmpty ? noSearch() : exploreList(locations);

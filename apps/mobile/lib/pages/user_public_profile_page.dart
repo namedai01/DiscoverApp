@@ -1,56 +1,104 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:memopin/logic/map_logic.dart';
-import 'package:memopin/pages/user_stories_timeline.dart';
-import 'package:memopin/utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:memopin/api/api_client.dart';
+import 'package:memopin/api/models.dart';
+import 'package:memopin/components/net_image.dart';
+import 'package:memopin/pages/user_stories_timeline.dart';
+import 'package:memopin/services/services.dart';
+import 'package:memopin/utils.dart';
 
-import '../const.dart';
-
-// ignore: must_be_immutable
 class UserPublicProfilePage extends StatefulWidget {
-  final String uid;
-  final String displayName;
-  final String photoURL;
-  int follower;
+  final AppUser user;
 
-  UserPublicProfilePage({
-    super.key,
-    required this.uid,
-    required this.displayName,
-    required this.photoURL,
-    required this.follower,
-  });
+  const UserPublicProfilePage({super.key, required this.user});
 
   @override
   State<UserPublicProfilePage> createState() => _UserPublicProfilePageState();
 }
 
 class _UserPublicProfilePageState extends State<UserPublicProfilePage> {
-  final FirebaseFirestore firestore = FirebaseFirestore.instance;
-  final FirebaseAuth firebaseAuth = FirebaseAuth.instance;
-  bool fl = false;
+  // Starts as the user passed in; replaced by GET /v1/users/{id}, which
+  // carries the current follower count and `isFollowing`.
+  late AppUser _user;
+  bool _busy = false;
+  Key _timelineKey = UniqueKey();
+
+  String get _currentUid => FirebaseAuth.instance.currentUser?.uid ?? '';
+  bool get _isMe => _user.id == _currentUid;
+  bool get _canSeeStories => _isMe || _user.isFollowing == true;
 
   @override
   void initState() {
     super.initState();
-    firestore
-        .collection(followCollectionPath)
-        .where("follower", isEqualTo: firebaseAuth.currentUser!.uid)
-        .where('target', isEqualTo: widget.uid)
-        .get()
-        .then((value) {
-          if (value.docs.isNotEmpty && mounted) {
-            logger.d("User public profile: ${value.docs[0].id}");
-            setState(() {
-              fl = true;
-            });
-          }
-        });
+    _user = widget.user;
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final fresh = await api.getUser(widget.user.id);
+      if (!mounted) return;
+      setState(() {
+        _user = fresh;
+        _timelineKey = UniqueKey();
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      _showError(e, retry: _load);
+    }
+  }
+
+  void _showError(ApiException e, {VoidCallback? retry}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(e.userMessage),
+        action: retry == null
+            ? null
+            : SnackBarAction(label: 'Retry', onPressed: retry),
+      ),
+    );
+  }
+
+  Future<void> _toggleFollow() async {
+    if (_busy) return;
+    final following = _user.isFollowing == true;
+    setState(() => _busy = true);
+    try {
+      if (following) {
+        await api.unfollow(_user.id);
+      } else {
+        await api.follow(_user.id);
+      }
+      final fresh = await api.getUser(_user.id);
+      if (!mounted) return;
+      setState(() {
+        _user = fresh;
+        _timelineKey = UniqueKey();
+      });
+    } on ApiException catch (e) {
+      if (mounted) _showError(e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Widget _followButton() {
+    final following = _user.isFollowing == true;
+    return ElevatedButton(
+      style: following
+          ? ButtonStyle(
+              backgroundColor: WidgetStateProperty.all<Color>(Colors.white10),
+            )
+          : null,
+      // Disabled while a request is in flight or until we know the state.
+      onPressed: _busy || _user.isFollowing == null ? null : _toggleFollow,
+      child: Text(following ? 'Unfollow' : 'Follow'),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final image = imageOrNull(_user.photoUrl);
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.only(top: 50),
@@ -69,91 +117,40 @@ class _UserPublicProfilePageState extends State<UserPublicProfilePage> {
                     height: 150,
                     width: 150,
                     child: Hero(
-                      tag: 'HeroTag ' + widget.displayName,
+                      tag: 'HeroTag ${_user.displayName}',
                       child: Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          image: DecorationImage(
-                            image: NetworkImage(widget.photoURL),
-                            fit: BoxFit.contain,
-                          ),
+                          image: image == null
+                              ? null
+                              : DecorationImage(
+                                  image: image,
+                                  fit: BoxFit.contain,
+                                ),
                         ),
                       ),
                     ),
                   ),
-                  Center(child: Text(widget.displayName)),
-                  widget.uid != FirebaseAuth.instance.currentUser!.uid
-                      ? Row(
+                  Center(child: Text(_user.displayName)),
+                  _isMe
+                      ? Center(child: Text(formatFollower(_user.followerCount)))
+                      : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(formatFollower(widget.follower)),
+                            Text(formatFollower(_user.followerCount)),
                             SizedBox(width: 20),
-                            StreamBuilder(
-                              stream: FirebaseAuth.instance.authStateChanges(),
-                              builder:
-                                  (
-                                    BuildContext context,
-                                    AsyncSnapshot snapshot,
-                                  ) {
-                                    if (!snapshot.hasData) return Container();
-                                    String currentUid = snapshot.data.uid;
-                                    return StreamBuilder(
-                                      stream: firestore
-                                          .collection(followCollectionPath)
-                                          .where(
-                                            'follower',
-                                            isEqualTo: currentUid,
-                                          )
-                                          .where(
-                                            'target',
-                                            isEqualTo: widget.uid,
-                                          )
-                                          .snapshots(),
-                                      builder:
-                                          (
-                                            BuildContext context,
-                                            AsyncSnapshot snapshot,
-                                          ) {
-                                            if (!snapshot.hasData ||
-                                                snapshot.data.docs.length ==
-                                                    0) {
-                                              return ElevatedButton(
-                                                onPressed: () {
-                                                  follow(
-                                                    currentUid,
-                                                    widget.uid,
-                                                  );
-                                                },
-                                                child: Text('Follow'),
-                                              );
-                                            } else {
-                                              return ElevatedButton(
-                                                style: ButtonStyle(
-                                                  backgroundColor:
-                                                      WidgetStateProperty.all<
-                                                        Color
-                                                      >(Colors.white10),
-                                                ),
-                                                onPressed: () {
-                                                  unfollow(
-                                                    currentUid,
-                                                    widget.uid,
-                                                  );
-                                                },
-                                                child: Text('Unfollow'),
-                                              );
-                                            }
-                                          },
-                                    );
-                                  },
-                            ),
+                            _followButton(),
                           ],
-                        )
-                      : Center(child: Text(formatFollower(widget.follower))),
+                        ),
                   SizedBox(height: 20),
                   Divider(thickness: 2),
-                  fl
-                      ? Expanded(child: UserStoriesTimeLine(uid: widget.uid))
+                  _canSeeStories
+                      ? Expanded(
+                          child: UserStoriesTimeLine(
+                            key: _timelineKey,
+                            uid: _user.id,
+                          ),
+                        )
                       : Container(
                           margin: EdgeInsets.all(50),
                           child: Center(
@@ -182,33 +179,5 @@ class _UserPublicProfilePageState extends State<UserPublicProfilePage> {
         ),
       ),
     );
-  }
-
-  Future<void> follow(String currentUid, String uid) async {
-    setState(() {
-      fl = true;
-      widget.follower++;
-    });
-
-    await firestore.collection(followCollectionPath).add({
-      'follower': currentUid,
-      'target': uid,
-    });
-  }
-
-  Future<void> unfollow(String currentUid, String uid) async {
-    setState(() {
-      widget.follower--;
-    });
-    List<dynamic> records =
-        (await firestore
-                .collection(followCollectionPath)
-                .where('follower', isEqualTo: currentUid)
-                .where('target', isEqualTo: uid)
-                .get())
-            .docs;
-    for (var record in records) {
-      firestore.collection(followCollectionPath).doc(record.id).delete();
-    }
   }
 }

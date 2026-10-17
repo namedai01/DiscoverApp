@@ -34,21 +34,14 @@ Widget exploreList(List<Location> locations) {
   );
 }
 
-Widget explorePeopleList(datas, followerDict) {
+Widget explorePeopleList(List<AppUser> users) {
   return ListView.builder(
     physics: BouncingScrollPhysics(),
-    itemCount: datas.length,
+    itemCount: users.length,
     itemBuilder: (BuildContext context, int index) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(30, 0, 30, 20),
-        child: UserCard(
-          uid: datas[index].id,
-          displayName: datas[index]['displayName'],
-          photoURL: datas[index]['photoURL'],
-          follower: followerDict[datas[index].id] == null
-              ? 0
-              : followerDict[datas[index].id],
-        ),
+        child: UserCard(user: users[index]),
       );
     },
   );
