@@ -41,7 +41,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		items[i] = UserJSON{
 			ID:            row.ID,
 			DisplayName:   row.DisplayName,
-			PhotoURL:      deref(row.PhotoUrl),
+			PhotoURL:      PhotoOrDefault(row.PhotoUrl, h.DefaultPhotoURL),
 			FollowerCount: row.FollowerCount,
 		}
 	}
@@ -70,7 +70,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, UserJSON{
 		ID:            row.ID,
 		DisplayName:   row.DisplayName,
-		PhotoURL:      deref(row.PhotoUrl),
+		PhotoURL:      PhotoOrDefault(row.PhotoUrl, h.DefaultPhotoURL),
 		FollowerCount: row.FollowerCount,
 		IsFollowing:   &row.IsFollowing,
 	})

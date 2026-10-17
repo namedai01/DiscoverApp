@@ -230,7 +230,7 @@ func TestCreateStory_NotifierPanicIsContained(t *testing.T) {
 type page struct {
 	Items []struct {
 		ID    string
-		Owner struct{ ID string }
+		Owner struct{ ID, PhotoURL string }
 	}
 	NextCursor *string
 }
@@ -361,5 +361,28 @@ func TestUserStories_UnknownUserAndAuth(t *testing.T) {
 	}
 	if w := testutil.Do(t, h, "GET", "/v1/users/u1/stories?cursor=garbage", "u1", nil); w.Code != http.StatusBadRequest {
 		t.Errorf("garbage cursor = %d, want 400", w.Code)
+	}
+}
+
+func TestStoryOwnerPhoto_DefaultAtRender(t *testing.T) {
+	h, pool, _ := newHandler(t)
+	loc := testutil.SeedLocation(t, pool, "Hanoi", 21.03, 105.85)
+	testutil.SeedUser(t, pool, "u1", "An") // photo_url NULL
+	testutil.SeedUser(t, pool, "u2", "Binh")
+	if _, err := pool.Exec(t.Context(), "UPDATE users SET photo_url = 'https://example.test/own.png' WHERE id = 'u2'"); err != nil {
+		t.Fatal(err)
+	}
+	testutil.SeedStory(t, pool, "u1", loc, time.Now().Add(-time.Minute))
+	testutil.SeedStory(t, pool, "u2", loc, time.Now())
+
+	p := getPage(t, h, "", "/v1/locations/"+loc.String()+"/stories")
+	if len(p.Items) != 2 {
+		t.Fatalf("items = %+v", p.Items)
+	}
+	want := map[string]string{"u1": "https://example.test/default.png", "u2": "https://example.test/own.png"}
+	for _, it := range p.Items {
+		if it.Owner.PhotoURL != want[it.Owner.ID] {
+			t.Errorf("owner %s photoUrl = %q, want %q", it.Owner.ID, it.Owner.PhotoURL, want[it.Owner.ID])
+		}
 	}
 }

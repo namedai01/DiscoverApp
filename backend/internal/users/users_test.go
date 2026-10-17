@@ -192,3 +192,36 @@ func TestGetUser_Unknown404(t *testing.T) {
 		t.Fatalf("status = %d, body = %s", w.Code, w.Body)
 	}
 }
+
+func TestDefaultPhotoAppliedAtRender(t *testing.T) {
+	h, pool := newHandler(t)
+	testutil.SeedUser(t, pool, "u1", "No Photo") // photo_url NULL
+	testutil.SeedUser(t, pool, "u2", "Empty Photo")
+	if _, err := pool.Exec(t.Context(), "UPDATE users SET photo_url = '' WHERE id = 'u2'"); err != nil {
+		t.Fatal(err)
+	}
+	testutil.SeedUser(t, pool, "u3", "Own Photo")
+	if _, err := pool.Exec(t.Context(), "UPDATE users SET photo_url = 'https://example.test/own.png' WHERE id = 'u3'"); err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]string{"u1": defaultPhoto, "u2": defaultPhoto, "u3": "https://example.test/own.png"}
+	for _, it := range listUsers(t, h, "/v1/users") {
+		if got := it["photoUrl"]; got != want[it["id"].(string)] {
+			t.Errorf("list: %v photoUrl = %v, want %v", it["id"], got, want[it["id"].(string)])
+		}
+	}
+	for uid, photo := range want {
+		w := testutil.Do(t, h, "GET", "/v1/users/"+uid, "viewer", nil)
+		if got := decodeUser(t, w.Body.Bytes())["photoUrl"]; got != photo {
+			t.Errorf("get %s: photoUrl = %v, want %v", uid, got, photo)
+		}
+	}
+
+	// GET /v1/me for a user whose stored photo is NULL.
+	testutil.SeedUser(t, pool, "u4", "Me")
+	w := testutil.Do(t, h, "GET", "/v1/me", "u4", nil)
+	if got := decodeUser(t, w.Body.Bytes())["photoUrl"]; got != defaultPhoto {
+		t.Errorf("me: photoUrl = %v, want %v", got, defaultPhoto)
+	}
+}

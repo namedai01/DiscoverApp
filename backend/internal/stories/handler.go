@@ -63,16 +63,14 @@ type StoryJSON struct {
 // types have identical fields and convert to it.
 type storyRow = store.ListStoriesByLocationRow
 
-func toJSON(r storyRow) StoryJSON {
+func toJSON(r storyRow, defaultPhoto string) StoryJSON {
 	s := StoryJSON{
 		ID: r.ID.String(), Title: r.Title, Type: r.Type, Description: r.Description,
 		ImageURL: r.ImageUrl, CreatedAt: r.CreatedAt.UTC(),
 	}
 	s.Location.ID, s.Location.VenueName = r.LocationID.String(), r.VenueName
 	s.Owner.ID, s.Owner.DisplayName = r.OwnerID, r.OwnerDisplayName
-	if r.OwnerPhotoUrl != nil {
-		s.Owner.PhotoURL = *r.OwnerPhotoUrl
-	}
+	s.Owner.PhotoURL = users.PhotoOrDefault(r.OwnerPhotoUrl, defaultPhoto)
 	return s
 }
 
@@ -155,7 +153,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	// its failures and panics are only logged.
 	h.notify(r.Context(), row.ID)
 
-	httpx.JSON(w, http.StatusCreated, toJSON(storyRow(row)))
+	httpx.JSON(w, http.StatusCreated, toJSON(storyRow(row), h.DefaultPhotoURL))
 }
 
 // notify tells the Notifier about a stored story, synchronously, with a
@@ -199,7 +197,7 @@ func (h *Handler) ListByLocation(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, err)
 		return
 	}
-	writePage(w, rows, limit)
+	h.writePage(w, rows, limit)
 }
 
 // ListByOwner returns a user's stories, newest first. Only the owner and the
@@ -247,7 +245,7 @@ func (h *Handler) ListByOwner(w http.ResponseWriter, r *http.Request) {
 	for i, row := range rows {
 		items[i] = storyRow(row)
 	}
-	writePage(w, items, limit)
+	h.writePage(w, items, limit)
 }
 
 // pageParams parses limit and the optional cursor; the cursor is a zero
@@ -269,7 +267,7 @@ func pageParams(r *http.Request) (limit int, t pgtype.Timestamptz, id pgtype.UUI
 
 // writePage renders rows fetched with limit+1: a surplus row means another
 // page exists, and the cursor points at the last row shown.
-func writePage(w http.ResponseWriter, rows []storyRow, limit int) {
+func (h *Handler) writePage(w http.ResponseWriter, rows []storyRow, limit int) {
 	var next *string
 	if len(rows) > limit {
 		rows = rows[:limit]
@@ -279,7 +277,7 @@ func writePage(w http.ResponseWriter, rows []storyRow, limit int) {
 	}
 	items := make([]StoryJSON, len(rows))
 	for i, row := range rows {
-		items[i] = toJSON(row)
+		items[i] = toJSON(row, h.DefaultPhotoURL)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"items": items, "nextCursor": next})
 }

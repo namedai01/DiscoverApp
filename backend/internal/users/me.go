@@ -120,7 +120,7 @@ func (h *Handler) writeMe(w http.ResponseWriter, r *http.Request, id auth.Identi
 	httpx.JSON(w, http.StatusOK, UserJSON{
 		ID:            row.ID,
 		DisplayName:   row.DisplayName,
-		PhotoURL:      deref(row.PhotoUrl),
+		PhotoURL:      PhotoOrDefault(row.PhotoUrl, h.DefaultPhotoURL),
 		FollowerCount: row.FollowerCount,
 	})
 }
@@ -144,9 +144,12 @@ func nonEmpty(s string) *string {
 	return &s
 }
 
-func deref(s *string) string {
-	if s == nil {
-		return ""
+// PhotoOrDefault is the stored photo URL, or defaultPhoto when none is stored
+// (NULL or empty). Defaults are applied at render time, so changing
+// DEFAULT_USER_PHOTO_URL also updates users who never set a photo.
+func PhotoOrDefault(stored *string, defaultPhoto string) string {
+	if stored == nil || *stored == "" {
+		return defaultPhoto
 	}
-	return *s
+	return *stored
 }

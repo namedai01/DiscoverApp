@@ -48,7 +48,7 @@ Read from the environment (see `.env.example`).
 | `AUTH_MODE` | `firebase` | never | `firebase` or `fake`. `fake` is refused unless `APP_ENV=dev`. |
 | `FIREBASE_PROJECT_ID` | none | `AUTH_MODE=firebase` | Firebase project that issues the ID tokens. |
 | `STORAGE_BUCKET` | none | `AUTH_MODE=firebase` | `<PROJECT_ID>.firebasestorage.app`. Image URLs on write must live in this bucket under `uploads/<caller uid>/`. |
-| `DEFAULT_USER_PHOTO_URL` | empty | never | Photo for users who have not set one. |
+| `DEFAULT_USER_PHOTO_URL` | empty | never | Photo for users who have not set one. Copied onto new users at first login, and also returned at render time (user and story-owner `photoUrl`) for any user whose stored photo is empty. When the variable is empty, `photoUrl` is `""` and clients need their own placeholder. |
 | `CORS_ORIGINS` | empty | `APP_ENV=prod` | Comma-separated allowed origins. |
 
 Local database URL: `postgres://memopin:memopin@localhost:5433/memopin?sslmode=disable`.
