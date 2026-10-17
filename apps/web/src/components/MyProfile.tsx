@@ -87,7 +87,9 @@ export function MyProfile() {
   async function saveName(e: FormEvent) {
     e.preventDefault();
     if (savingNameRef.current) return;
-    const name = draft.trim();
+    // NFC first: the backend counts code points, and a decomposed name (e.g.
+    // pasted from macOS) is longer than the same name composed.
+    const name = draft.normalize("NFC").trim();
     const length = codePoints(name);
     if (length < 1 || length > 50) {
       setNameError(NAME_ERROR);

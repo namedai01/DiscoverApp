@@ -73,6 +73,20 @@ describe("MyProfile", () => {
       expect(updateMe).toHaveBeenCalledWith({ displayName: "An" });
     });
 
+    it("normalises to NFC before counting and sending", async () => {
+      const { updateMe } = setup();
+      await userEvent.click(await screen.findByRole("button", { name: "Edit name" }));
+      const input = screen.getByLabelText("Display name");
+      await userEvent.clear(input);
+      // Decomposed é is 2 code points: 50 of them are 100 raw, 50 once composed.
+      await userEvent.click(input);
+      await userEvent.paste("e\u0301".repeat(50));
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => expect(updateMe).toHaveBeenCalledTimes(1));
+      expect(updateMe).toHaveBeenCalledWith({ displayName: "\u00e9".repeat(50) });
+    });
+
     it("rejects a name over 50 code points", async () => {
       const { updateMe } = setup();
       await userEvent.click(await screen.findByRole("button", { name: "Edit name" }));

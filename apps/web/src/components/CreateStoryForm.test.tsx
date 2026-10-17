@@ -274,6 +274,29 @@ describe("CreateStoryForm", () => {
       await waitFor(() => expect(createStory).toHaveBeenCalled());
     });
 
+    it("normalises title, type and description to NFC before counting and sending", async () => {
+      const { createStory } = setup();
+      await userEvent.upload(screen.getByLabelText("Photo"), photo());
+      const decomposed = (n: number) => "e\u0301".repeat(n);
+      const composed = (n: number) => "\u00e9".repeat(n);
+      // Each is over its limit in raw code points but within it once composed.
+      await userEvent.click(screen.getByLabelText("Title"));
+      await userEvent.paste(decomposed(100));
+      await userEvent.click(screen.getByLabelText("Type"));
+      await userEvent.paste(decomposed(50));
+      await userEvent.click(screen.getByLabelText("Description"));
+      await userEvent.paste(decomposed(2000));
+      await submit();
+      await waitFor(() => expect(createStory).toHaveBeenCalled());
+      expect(createStory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: composed(100),
+          type: composed(50),
+          description: composed(2000),
+        }),
+      );
+    });
+
     it("limits type to 50", async () => {
       setup();
       await userEvent.upload(screen.getByLabelText("Photo"), photo());

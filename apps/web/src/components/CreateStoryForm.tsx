@@ -118,7 +118,14 @@ export function CreateStoryForm() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (busyRef.current || !user) return;
-    const problem = validate(file, title.trim(), type, description);
+    // NFC first: the backend counts code points, and decomposed text (e.g.
+    // pasted from macOS) is longer than the same text composed.
+    const fields = {
+      title: title.normalize("NFC").trim(),
+      type: type.normalize("NFC"),
+      description: description.normalize("NFC"),
+    };
+    const problem = validate(file, fields.title, fields.type, fields.description);
     if (problem || !file) {
       setError(problem);
       return;
@@ -137,9 +144,7 @@ export function CreateStoryForm() {
       const imageUrl = await uploadPhoto(file, image, user.uid);
       setStep("posting");
       const story = await api.createStory({
-        title: title.trim(),
-        type,
-        description,
+        ...fields,
         imageUrl,
         lat,
         lng,
