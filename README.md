@@ -12,11 +12,11 @@ Planned: `apps/web/` (web client). Add it as its own top-level project with its 
 
 ## Features
 
-Memopin lets users browse places, post photo stories tied to a place, follow other users, and see places on a map. Backend is Firebase (Auth, Firestore, Storage). The app has 5 tabs: Explore, People, Maps, Create Story, My Profile.
+Memopin lets users browse places, post photo stories tied to a place, follow other users, and see places on a map. Data lives behind the Go API in `backend/` (Postgres); Firebase provides phone sign-in, photo storage and push (Auth, Storage, Cloud Messaging). The app has 5 tabs: Explore, People, Maps, Create Story, My Profile.
 
 ### Explore places
 
-- Horizontal card list of all `locations`, sorted by name. Each card shows cover photo, name, area and a live story count.
+- Horizontal card list of all places, sorted by name. Each card shows cover photo, name, area and story count (refreshed on reload, not live).
 - Search by name prefix (case-insensitive).
 - Place details: full-screen cover, then description and "Local stories" (newest first).
 - Story view: photo, title, type, description, posted time.
@@ -32,7 +32,7 @@ Memopin lets users browse places, post photo stories tied to a place, follow oth
 
 - Pick a photo from the gallery, enter title, type and description.
 - The story is attached automatically to the nearest place, based on current GPS location (location permission required).
-- Photo is uploaded to Firebase Storage; the story is saved to `stories`.
+- Photo is uploaded to Firebase Storage; the story is then posted to the API.
 
 ### Map
 
@@ -41,15 +41,19 @@ Memopin lets users browse places, post photo stories tied to a place, follow oth
 
 ### Account and app
 
-- Phone number sign-in with SMS code. A `users` profile is created on first sign-in.
+- Phone number sign-in with SMS code. The API creates the profile on first sign-in (default display name `user <first 6 chars of uid>`).
 - My Profile: change display name and avatar, see follower count and own stories, sign out.
-- Local notification when someone you follow posts a new story (works while the app is running; no push notifications).
+- Push notification (FCM, sent by the backend) when someone you follow posts a new story; the app registers its device token after sign-in and removes it on sign-out. The Android app shows pushes that arrive in the foreground as a local notification.
 - Accent color theme (Yellow, Red, Blue, Green, Pink), saved on device.
 - "No internet" dialog when the connection drops.
 
 ### Not yet supported
 
-Likes, comments, editing or deleting stories, in-app routing, push notifications (FCM), automated tests.
+Likes, comments, editing or deleting stories, in-app routing, live (realtime) updates, widget and integration tests.
+
+### Tests
+
+`cd apps/mobile && flutter test` runs unit tests for the API client, API calls and models, the cursor pager, input validators, the story submitter, Storage upload paths, push registration, map helpers, time/follower formatting and the network image widget. They need no Firebase project, device or network.
 
 ## Backend
 
