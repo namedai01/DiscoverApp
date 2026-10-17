@@ -217,12 +217,23 @@ func TestEnsure_Idempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	xmin := func() string {
+		var x string
+		if err := pool.QueryRow(t.Context(), "SELECT xmin::text FROM users WHERE id = 'u1'").Scan(&x); err != nil {
+			t.Fatal(err)
+		}
+		return x
+	}
+	before := xmin()
 	b, err := users.Ensure(t.Context(), q, id, defaultPhoto)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if a.ID != b.ID || a.DisplayName != b.DisplayName || countUsers(t, pool) != 1 {
 		t.Fatalf("a = %+v, b = %+v", a, b)
+	}
+	if after := xmin(); after != before {
+		t.Fatalf("second Ensure rewrote the row (xmin %s -> %s)", before, after)
 	}
 }
 

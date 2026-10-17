@@ -36,15 +36,19 @@ type UserJSON struct {
 // Ensure returns the caller's user row, creating it on first sight with the
 // display name "user <first 6 chars of uid>" and the default photo. The phone
 // is stored but never put in the name, since names are shown publicly. An
-// existing row is returned untouched, so renames survive. Handlers that write
+// existing row is returned untouched (never rewritten), so renames survive. Handlers that write
 // rows referencing the caller call it first.
 func Ensure(ctx context.Context, q *store.Queries, id auth.Identity, defaultPhoto string) (store.User, error) {
-	return q.UpsertUser(ctx, store.UpsertUserParams{
+	err := q.InsertUserIfAbsent(ctx, store.InsertUserIfAbsentParams{
 		ID:          id.UID,
 		DisplayName: "user " + id.UID[:min(len(id.UID), defaultNameUIDChars)],
 		PhotoUrl:    nonEmpty(defaultPhoto),
 		Phone:       nonEmpty(id.Phone),
 	})
+	if err != nil {
+		return store.User{}, err
+	}
+	return q.GetUser(ctx, id.UID)
 }
 
 // GetMe returns the caller's profile, creating it on first call.

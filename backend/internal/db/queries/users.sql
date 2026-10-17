@@ -1,10 +1,13 @@
--- name: UpsertUser :one
--- The no-op DO UPDATE makes RETURNING yield the existing row, so a renamed
--- user keeps their display name.
+-- name: InsertUserIfAbsent :exec
+-- DO NOTHING (not a no-op DO UPDATE) so an existing row is never rewritten.
+-- Callers read the row back with GetUser in a second statement: a single
+-- CTE statement could miss a row another transaction just committed.
 INSERT INTO users (id, display_name, photo_url, phone)
 VALUES ($1, $2, $3, $4)
-ON CONFLICT (id) DO UPDATE SET id = EXCLUDED.id
-RETURNING *;
+ON CONFLICT (id) DO NOTHING;
+
+-- name: GetUser :one
+SELECT * FROM users WHERE id = $1;
 
 -- name: UpdateUser :one
 UPDATE users

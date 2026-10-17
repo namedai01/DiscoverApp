@@ -9,6 +9,24 @@ import (
 	"context"
 )
 
+const getUser = `-- name: GetUser :one
+SELECT id, display_name, photo_url, phone, created_at, updated_at FROM users WHERE id = $1
+`
+
+func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
+	row := q.db.QueryRow(ctx, getUser, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.DisplayName,
+		&i.PhotoUrl,
+		&i.Phone,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUserWithStats = `-- name: GetUserWithStats :one
 SELECT u.id,
        u.display_name,
@@ -46,6 +64,32 @@ func (q *Queries) GetUserWithStats(ctx context.Context, arg GetUserWithStatsPara
 		&i.IsFollowing,
 	)
 	return i, err
+}
+
+const insertUserIfAbsent = `-- name: InsertUserIfAbsent :exec
+INSERT INTO users (id, display_name, photo_url, phone)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (id) DO NOTHING
+`
+
+type InsertUserIfAbsentParams struct {
+	ID          string
+	DisplayName string
+	PhotoUrl    *string
+	Phone       *string
+}
+
+// DO NOTHING (not a no-op DO UPDATE) so an existing row is never rewritten.
+// Callers read the row back with GetUser in a second statement: a single
+// CTE statement could miss a row another transaction just committed.
+func (q *Queries) InsertUserIfAbsent(ctx context.Context, arg InsertUserIfAbsentParams) error {
+	_, err := q.db.Exec(ctx, insertUserIfAbsent,
+		arg.ID,
+		arg.DisplayName,
+		arg.PhotoUrl,
+		arg.Phone,
+	)
+	return err
 }
 
 const listUsers = `-- name: ListUsers :many
@@ -117,41 +161,6 @@ type UpdateUserParams struct {
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, updateUser, arg.DisplayName, arg.PhotoUrl, arg.ID)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.DisplayName,
-		&i.PhotoUrl,
-		&i.Phone,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const upsertUser = `-- name: UpsertUser :one
-INSERT INTO users (id, display_name, photo_url, phone)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT (id) DO UPDATE SET id = EXCLUDED.id
-RETURNING id, display_name, photo_url, phone, created_at, updated_at
-`
-
-type UpsertUserParams struct {
-	ID          string
-	DisplayName string
-	PhotoUrl    *string
-	Phone       *string
-}
-
-// The no-op DO UPDATE makes RETURNING yield the existing row, so a renamed
-// user keeps their display name.
-func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, upsertUser,
-		arg.ID,
-		arg.DisplayName,
-		arg.PhotoUrl,
-		arg.Phone,
-	)
 	var i User
 	err := row.Scan(
 		&i.ID,
