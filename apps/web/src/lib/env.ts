@@ -85,7 +85,8 @@ export function parsePublicEnv(
       attribution: text(
         raw,
         "NEXT_PUBLIC_MAP_ATTRIBUTION",
-        "OpenStreetMap contributors",
+        // Leaflet renders this as HTML; OSM's tile policy asks for the link.
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       ),
       initialLat: num(raw, "NEXT_PUBLIC_MAP_INITIAL_LAT", 21.03),
       initialLng: num(raw, "NEXT_PUBLIC_MAP_INITIAL_LNG", 105.78),

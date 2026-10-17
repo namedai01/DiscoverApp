@@ -8,7 +8,8 @@ describe("parsePublicEnv", () => {
     expect(env.authMode).toBe("firebase");
     expect(env.map).toEqual({
       tileUrl: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-      attribution: "OpenStreetMap contributors",
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       initialLat: 21.03,
       initialLng: 105.78,
       initialZoom: 5,

@@ -38,7 +38,7 @@ Every variable is public (inlined into the browser bundle); never put secrets he
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | | Firebase web app config |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | | Firebase web app config |
 | `NEXT_PUBLIC_MAP_TILE_URL` | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` | Tile layer; use a hosted provider for real traffic |
-| `NEXT_PUBLIC_MAP_ATTRIBUTION` | `OpenStreetMap contributors` | Tile attribution |
+| `NEXT_PUBLIC_MAP_ATTRIBUTION` | `&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors` | Tile attribution (HTML; keep the OSM link when using OSM tiles) |
 | `NEXT_PUBLIC_MAP_INITIAL_LAT` | `21.03` | Initial map center |
 | `NEXT_PUBLIC_MAP_INITIAL_LNG` | `105.78` | Initial map center |
 | `NEXT_PUBLIC_MAP_INITIAL_ZOOM` | `5` | Initial map zoom |
