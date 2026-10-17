@@ -140,11 +140,13 @@ Deploy (after backend Phase 1 is done; run from repo root):
 gcloud run deploy memopin-api --source backend --region <REGION> \
   --service-account "$SA" \
   --set-secrets DATABASE_URL=database-url:latest \
-  --set-env-vars APP_ENV=prod,AUTH_MODE=firebase,FIREBASE_PROJECT_ID=<PROJECT_ID>,STORAGE_BUCKET=<PROJECT_ID>.firebasestorage.app \
+  --set-env-vars "^@^APP_ENV=prod@AUTH_MODE=firebase@FIREBASE_PROJECT_ID=<PROJECT_ID>@STORAGE_BUCKET=<PROJECT_ID>.firebasestorage.app@CORS_ORIGINS=<WEB_ORIGINS>" \
   --allow-unauthenticated
 ```
 
 `--allow-unauthenticated` is correct: Cloud Run lets requests in, the API itself checks Firebase ID tokens.
+
+`<WEB_ORIGINS>` is a comma list of web origins (e.g. `https://memopin.app,http://localhost:3000`); the `^@^` prefix makes `@` the separator so the commas survive. The API refuses to start in prod without `CORS_ORIGINS`.
 
 ## 8. Local development
 

@@ -19,7 +19,7 @@
 - JSON is camelCase. Error body: `{"error":{"code":"<code>","message":"<text>"}}`. Codes: `bad_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`, `unprocessable`, `internal`.
 - Timestamps: RFC 3339 UTC.
 - List limits: default 20, max 100; `limit` outside 1..100 → clamp, non-integer → 400.
-- Default display name on first login: `user <phone_number>` (from token claim; `user` alone if no phone).
+- Default display name on first login: `user <first 6 chars of uid>` (ruling R21; the phone number is never part of a public name).
 - Image URLs accepted on write must start with `https://firebasestorage.googleapis.com/v0/b/<STORAGE_BUCKET>/o/uploads%2F<caller uid>%2F`.
 - Push body copy: `<displayName> has just posted a new story.`; title `Memopin`; data `{"type":"new_story","storyId":"<id>","locationId":"<id>"}`.
 - Config via env (`.env.example` lists all): `APP_ENV` (`dev` | `prod`), `DATABASE_URL`, `PORT` (default 8080; Cloud Run sets it), `FIREBASE_PROJECT_ID`, `STORAGE_BUCKET` (`<PROJECT_ID>.firebasestorage.app`), `DEFAULT_USER_PHOTO_URL`, `CORS_ORIGINS` (comma list), `AUTH_MODE` (`firebase` | `fake`; `fake` refused unless `APP_ENV=dev`).
