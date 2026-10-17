@@ -1,14 +1,14 @@
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'package:geolocator/geolocator.dart';
-import 'package:logger/logger.dart';
-import 'package:random_string/random_string.dart';
+import '../api/api_client.dart';
+import '../logic/story_submitter.dart';
+import '../services/services.dart';
+import '../services/uploads.dart';
 
 class CreateStoryPage extends StatefulWidget {
   const CreateStoryPage({super.key});
@@ -18,20 +18,34 @@ class CreateStoryPage extends StatefulWidget {
 }
 
 class _CreateStoryPageState extends State<CreateStoryPage> {
-  final FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
-  var logger = Logger();
+  late final StorySubmitter _submitter = StorySubmitter(
+    api: api,
+    upload: uploadImage,
+    position: _currentPosition,
+  );
 
-  /// Properties for the story
-  String title = '', type = '', desc = '';
-  String locationId = "";
-  String venueName = "";
+  final _title = TextEditingController();
+  final _type = TextEditingController();
+  final _desc = TextEditingController();
 
   File? selectedImage;
-  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _type.dispose();
+    _desc.dispose();
+    super.dispose();
+  }
 
   /// Get the image from device when tap add-image
   Future<void> getImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      maxHeight: 1600,
+      imageQuality: 85,
+    );
     if (picked == null) return;
     setState(() {
       selectedImage = File(picked.path);
@@ -45,87 +59,41 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Upload story to firebase
+  /// Validate, upload the photo and post the story through the API.
   Future<void> upload() async {
-    final user = FirebaseAuth.instance.currentUser;
-    final image = selectedImage;
-    if (user == null) {
-      showMessage("Please Login :((((");
+    if (_submitter.busy) return;
+    if (FirebaseAuth.instance.currentUser == null) {
+      showMessage('Please sign in to post a story');
       return;
     }
-    if (image == null) {
-      showMessage("Please choose a photo");
-      return;
-    }
-
-    /// Get my current coordinate
-    final myPosition = await getCurrentPosition();
-    if (myPosition == null) {
-      showMessage("Location permission is required to post a story");
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
+    final draft = StoryDraft(
+      image: selectedImage,
+      title: _title.text,
+      type: _type.text,
+      description: _desc.text,
+    );
+    final posting = _submitter.submit(draft);
+    setState(() {});
     try {
-      /// Get the explore location from firebase (lat/long)
-      /// and pick the one with the smallest distance from my current location.
-      final querySnapshot = await firebaseFirestore
-          .collection('locations')
-          .get();
-      var minn = double.maxFinite;
-      for (final doc in querySnapshot.docs) {
-        final double x1 = (doc.get("latN") as num).toDouble();
-        final double y1 = (doc.get("longE") as num).toDouble();
-        final x2 = myPosition.latitude;
-        final y2 = myPosition.longitude;
-        final distance = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
-        if (minn > distance) {
-          minn = distance;
-          locationId = doc.id;
-          venueName = doc.get("venueName");
-        }
-      }
-
-      /// Add to storage
-      final firebaseStorageRef = FirebaseStorage.instance.ref().child(
-        "${randomAlphaNumeric(9)}.jpg",
-      );
-      final taskSnapshot = await firebaseStorageRef.putFile(image);
-
-      /// Get the link to image in storage
-      final downloadUrl = await taskSnapshot.ref.getDownloadURL();
-      logger.d("dowloadUrl: $downloadUrl");
-
-      /// Initial story object
-      final story = {
-        "locationId": locationId,
-        "owner": user.uid,
-        "storyDescription": desc,
-        "storyImage": downloadUrl,
-        "storyTime": DateTime.now(),
-        "storyTitle": title,
-        "storyType": type,
-      };
-
-      /// Add to firestore
-      await firebaseFirestore.collection('stories').add(story);
-      logger.d("Upload Successful !!!");
-    } catch (e) {
-      logger.e("Upload failed", error: e);
+      final story = await posting;
+      _title.clear();
+      _type.clear();
+      _desc.clear();
+      if (mounted) setState(() => selectedImage = null);
+      showMessage('Posted at ${story.venueName}');
+    } on StoryValidationException catch (e) {
+      showMessage(e.message);
+    } on ApiException catch (e) {
+      showMessage(e.userMessage);
+    } catch (_) {
+      showMessage('Could not post your story. Please try again.');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() {});
     }
   }
 
   /// Current device position, or null when location permission is denied.
-  Future<Position?> getCurrentPosition() async {
+  Future<({double lat, double lng})?> _currentPosition() async {
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -134,9 +102,10 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
         permission == LocationPermission.deniedForever) {
       return null;
     }
-    return Geolocator.getCurrentPosition(
+    final p = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
+    return (lat: p.latitude, lng: p.longitude);
   }
 
   @override
@@ -178,7 +147,7 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
           ),
         ],
       ),
-      body: _isLoading
+      body: _submitter.busy
           ? SingleChildScrollView(
               child: Container(
                 alignment: Alignment.center,
@@ -230,27 +199,21 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
                       child: Column(
                         children: <Widget>[
                           TextField(
+                            controller: _title,
                             decoration: InputDecoration(hintText: "Title"),
-                            onChanged: (val) {
-                              title = val;
-                            },
                           ),
                           TextField(
+                            controller: _type,
                             decoration: InputDecoration(hintText: "Type"),
-                            onChanged: (val) {
-                              type = val;
-                            },
                           ),
                           Container(
                             margin: const EdgeInsets.only(top: 20.0),
                             child: TextField(
+                              controller: _desc,
                               maxLines: 8,
                               decoration: InputDecoration.collapsed(
                                 hintText: "Description",
                               ),
-                              onChanged: (val) {
-                                desc = val;
-                              },
                             ),
                           ),
                         ],

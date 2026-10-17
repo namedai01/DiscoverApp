@@ -13,10 +13,6 @@ abstract final class AppConfig {
     return url.trim();
   }
 
-  /// Avatar given to a user on first login.
-  static String? get defaultUserPhotoUrl =>
-      dotenv.maybeGet('DEFAULT_USER_PHOTO_URL');
-
   /// `{z}/{x}/{y}` tile template. OSM public tiles are not for production.
   static String get mapTileUrl => dotenv.get(
     'MAP_TILE_URL',
