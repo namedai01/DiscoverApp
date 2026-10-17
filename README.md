@@ -5,9 +5,10 @@ Monorepo for Memopin.
 ```
 apps/
   mobile/        Flutter app (package `memopin`)
+backend/         Go API (Postgres, Firebase Auth, FCM)
 ```
 
-Planned: `apps/web/` (web client), `backend/` (server). Add each as its own top-level project with its own README.
+Planned: `apps/web/` (web client). Add it as its own top-level project with its own README.
 
 ## Features
 
@@ -49,6 +50,19 @@ Memopin lets users browse places, post photo stories tied to a place, follow oth
 ### Not yet supported
 
 Likes, comments, editing or deleting stories, in-app routing, push notifications (FCM), automated tests.
+
+## Backend
+
+Go HTTP API in `backend/`: places, stories, follows and FCM device tokens, backed by Postgres (PostGIS) and Firebase Auth.
+
+```bash
+cd backend
+cp .env.example .env
+make dev      # Postgres in Docker + API on :8080
+make test     # needs Docker
+```
+
+See `backend/README.md` for configuration, seed data, the API table and the Cloud Run deploy.
 
 ## Mobile app
 

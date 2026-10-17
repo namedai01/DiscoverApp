@@ -1,4 +1,17 @@
 services:
+  api:
+    build: .
+    environment:
+      APP_ENV: dev
+      AUTH_MODE: fake
+      DATABASE_URL: postgres://memopin:memopin@db:5432/memopin?sslmode=disable
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: postgis/postgis:16-3.4
     environment:
