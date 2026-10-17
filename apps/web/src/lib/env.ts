@@ -100,6 +100,13 @@ export function missingFirebaseKeys(cfg: FirebaseWebConfig): string[] {
     .map((field) => FIREBASE_KEYS[field]);
 }
 
+export function firebaseConfigError(cfg: FirebaseWebConfig): string | null {
+  const missing = missingFirebaseKeys(cfg);
+  return missing.length > 0
+    ? `Firebase web config is missing ${missing.join(", ")}. See apps/web/.env.example.`
+    : null;
+}
+
 // Next inlines NEXT_PUBLIC_* only on literal `process.env.NEXT_PUBLIC_X`
 // access, so every key is spelled out here and nowhere else.
 export const publicEnv: PublicEnv = parsePublicEnv(

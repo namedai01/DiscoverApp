@@ -4,11 +4,12 @@ import { truncate } from "@/lib/format";
 
 const DESCRIPTION_MAX = 160;
 
-// Empty or malformed image URLs would produce broken og:image tags.
+// Empty, malformed or non-web image URLs (javascript:, data:) must not reach
+// og:image / twitter:image tags.
 function isValidUrl(value: string): boolean {
   try {
-    new URL(value);
-    return true;
+    const { protocol } = new URL(value);
+    return protocol === "http:" || protocol === "https:";
   } catch {
     return false;
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { missingFirebaseKeys, parsePublicEnv } from "./env";
+import { firebaseConfigError, missingFirebaseKeys, parsePublicEnv } from "./env";
 
 describe("parsePublicEnv", () => {
   it("defaults", () => {
@@ -60,5 +60,26 @@ describe("missingFirebaseKeys", () => {
         appId: "",
       }),
     ).toEqual(["NEXT_PUBLIC_FIREBASE_API_KEY", "NEXT_PUBLIC_FIREBASE_APP_ID"]);
+  });
+});
+
+describe("firebaseConfigError", () => {
+  const full = {
+    apiKey: "k",
+    authDomain: "a",
+    projectId: "p",
+    storageBucket: "b",
+    messagingSenderId: "m",
+    appId: "i",
+  };
+
+  it("is null when the config is complete", () => {
+    expect(firebaseConfigError(full)).toBeNull();
+  });
+
+  it("names the missing keys", () => {
+    expect(firebaseConfigError({ ...full, apiKey: "", appId: "" })).toBe(
+      "Firebase web config is missing NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_APP_ID. See apps/web/.env.example.",
+    );
   });
 });

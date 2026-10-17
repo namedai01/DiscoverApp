@@ -48,4 +48,13 @@ describe("buildPlaceMetadata", () => {
     expect(cardOf(meta)).toBe("summary");
     expect((meta.twitter as { images?: unknown }).images).toBeUndefined();
   });
+
+  it.each(["javascript:alert(1)", "data:image/png;base64,AAAA", "ftp://x/y.jpg"])(
+    "drops a non-http(s) image url: %s",
+    (imageUrl) => {
+      const meta = buildPlaceMetadata(aLocation({ imageUrl }), SITE);
+      expect(meta.openGraph?.images).toBeUndefined();
+      expect(cardOf(meta)).toBe("summary");
+    },
+  );
 });
