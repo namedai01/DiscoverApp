@@ -84,6 +84,19 @@ describe("toJpeg", () => {
     expect(toBlob).toHaveBeenCalledWith(expect.any(Function), "image/jpeg", 0.85);
   });
 
+  it("decodes with the photo's EXIF orientation applied", async () => {
+    const { createImageBitmap } = stubBrowser({
+      width: 10,
+      height: 10,
+      jpegBytes: 1,
+    });
+    const file = fileOf("image/jpeg", 1);
+    await toJpeg(file);
+    expect(createImageBitmap).toHaveBeenCalledWith(file, {
+      imageOrientation: "from-image",
+    });
+  });
+
   it("never upscales a small photo", async () => {
     const { canvases, close } = stubBrowser({
       width: 800,

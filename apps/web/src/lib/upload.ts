@@ -31,7 +31,8 @@ export async function toJpeg(
 ): Promise<Blob> {
   let bitmap: ImageBitmap;
   try {
-    bitmap = await createImageBitmap(file);
+    // Explicit so the EXIF rotation is applied in every browser.
+    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   } catch {
     throw new UploadError(
       "This photo format isn't supported. Choose a JPEG or PNG.",
