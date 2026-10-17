@@ -29,7 +29,11 @@ void main() {
   var locationOff = false;
   var status = 201;
 
+  var positionTimesOut = false;
+  var uploadHangs = false;
+
   StorySubmitter make() => StorySubmitter(
+    uploadTimeout: const Duration(milliseconds: 50),
     api: fakeApi((req) async {
       requests.add(req);
       if (gate != null) await gate!.future;
@@ -41,11 +45,13 @@ void main() {
     }),
     upload: (file) async {
       uploads.add(file);
+      if (uploadHangs) return Completer<String>().future;
       if (gate != null) await gate!.future;
       return 'https://x/uploaded.jpg';
     },
     position: () async {
       if (locationOff) throw const LocationUnavailableException();
+      if (positionTimesOut) throw TimeoutException('no fix');
       return hasPosition ? (lat: 21.0, lng: 105.8) : null;
     },
   );
@@ -56,6 +62,8 @@ void main() {
     gate = null;
     hasPosition = true;
     locationOff = false;
+    positionTimesOut = false;
+    uploadHangs = false;
     status = 201;
   });
 
@@ -178,5 +186,39 @@ void main() {
       ),
     );
     expect(s.busy, isFalse);
+  });
+
+  test('a hanging upload times out with a clear message and posts nothing',
+      () async {
+    uploadHangs = true;
+    final s = make();
+    await expectLater(
+      s.submit(StoryDraft(image: image, title: 'Hello', type: 'food')),
+      throwsA(
+        isA<StoryValidationException>().having(
+          (e) => e.message,
+          'message',
+          'Upload timed out. Please try again.',
+        ),
+      ),
+    );
+    expect(requests, isEmpty);
+    expect(s.busy, isFalse);
+  });
+
+  test('a position timeout is treated like location unavailable', () async {
+    positionTimesOut = true;
+    final s = make();
+    await expectLater(
+      s.submit(StoryDraft(image: image, title: 'Hello', type: 'food')),
+      throwsA(
+        isA<StoryValidationException>().having(
+          (e) => e.message,
+          'message',
+          'Turn on location services to post a story',
+        ),
+      ),
+    );
+    expect(uploads, isEmpty);
   });
 }

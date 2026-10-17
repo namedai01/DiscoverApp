@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import '../api/memopin_api.dart';
@@ -46,11 +47,13 @@ class StorySubmitter {
     required this._api,
     required this._upload,
     required this._position,
+    this._uploadTimeout = const Duration(seconds: 60),
   });
 
   final MemopinApi _api;
   final Future<String> Function(File image) _upload;
   final Future<({double lat, double lng})?> Function() _position;
+  final Duration _uploadTimeout;
 
   Future<Story>? _inFlight;
 
@@ -84,6 +87,11 @@ class StorySubmitter {
       throw const StoryValidationException(
         'Turn on location services to post a story',
       );
+    } on TimeoutException {
+      // No GPS fix in time: same advice as location being off.
+      throw const StoryValidationException(
+        'Turn on location services to post a story',
+      );
     }
     if (here == null) {
       throw const StoryValidationException(
@@ -91,7 +99,14 @@ class StorySubmitter {
       );
     }
 
-    final imageUrl = await _upload(image);
+    final String imageUrl;
+    try {
+      imageUrl = await _upload(image).timeout(_uploadTimeout);
+    } on TimeoutException {
+      throw const StoryValidationException(
+        'Upload timed out. Please try again.',
+      );
+    }
     return _api.createStory(
       title: draft.title.trim(),
       type: draft.type,

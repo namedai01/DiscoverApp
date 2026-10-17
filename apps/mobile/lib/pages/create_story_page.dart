@@ -108,6 +108,7 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
       final p = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
         ),
       );
       return (lat: p.latitude, lng: p.longitude);
