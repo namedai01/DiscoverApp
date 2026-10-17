@@ -103,7 +103,7 @@ Database plan: **local Docker now, Neon Free when the API is first deployed**, C
 
 1. neon.tech → sign up → **New project**: name `memopin`, Postgres 16, region **AWS Asia Pacific (Singapore)** (closest to `<REGION>`).
 2. Database `memopin`, role `memopin_api` (Neon creates a default role; renaming is optional).
-3. Dashboard → **Connect** → turn **Connection pooling off** and copy the *direct* connection string. It looks like `postgres://memopin_api:<pw>@ep-xxx.ap-southeast-1.aws.neon.tech/memopin?sslmode=require`. Use the direct (non `-pooler`) host: migrations need a session, and the API keeps its own small pool.
+3. Dashboard → **Connect** → turn **Connection pooling off** and copy the *direct* connection string. It looks like `postgres://memopin_api:<pw>@ep-xxx.ap-southeast-1.aws.neon.tech/memopin?sslmode=verify-full`. Use the direct (non `-pooler`) host: migrations need a session, and the API keeps its own small pool.
 4. Check PostGIS once from the Neon SQL editor: `CREATE EXTENSION IF NOT EXISTS postgis; SELECT postgis_version();` (the backend migration also runs the `CREATE`).
 
 Free plan limits to keep in mind: 1 GB storage per project, 100 compute-hours per month, compute sleeps after 5 minutes idle (the first request after that waits for it to wake up).
@@ -120,7 +120,7 @@ gcloud services enable run.googleapis.com secretmanager.googleapis.com \
 Store the Neon connection string (append `&pool_max_conns=5` to stay well under Neon's connection limit):
 
 ```bash
-printf '%s' 'postgres://memopin_api:<pw>@ep-xxx.ap-southeast-1.aws.neon.tech/memopin?sslmode=require&pool_max_conns=5' \
+printf '%s' 'postgres://memopin_api:<pw>@ep-xxx.ap-southeast-1.aws.neon.tech/memopin?sslmode=verify-full&pool_max_conns=5' \
   | gcloud secrets create database-url --data-file=-
 ```
 

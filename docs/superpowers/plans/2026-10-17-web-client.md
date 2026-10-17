@@ -405,7 +405,7 @@ Exact messages:
 ## Backend gaps found (not fixed here; `backend/` is off limits for this plan)
 
 1. No `GET /v1/stories/{id}` → no shareable story page (dialog instead).
-2. Default display name `user <phone>` is returned by public `GET /v1/users` and as `owner.displayName` in public story lists, so phone numbers appear on server-rendered, indexable place pages. Web marks people pages `noindex` but cannot fix place pages; the backend should stop deriving public names from the phone.
+2. (Resolved in backend, ruling R21.) Default display names are `user <first 6 chars of uid>`; phone numbers never appear in any API response.
 3. Offset lists (`/v1/locations`, `/v1/users`) carry no `nextCursor`/total; the web infers "more" from a full page (one extra empty request at the end), and the map pages through all places at 100 per request (no bounding-box query).
 4. `AUTH_MODE=fake` has no image story: web fake uploads produce bucket-shaped URLs that pass `ValidImageURL` but do not resolve.
 5. `GET /v1/users` has no `isFollowing`, so follow/unfollow lives on the profile page only (same as mobile).

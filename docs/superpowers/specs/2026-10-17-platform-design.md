@@ -143,7 +143,7 @@ Phases 2 and 3 can run in parallel once Phase 1 is deployed.
 - Notifications are fire-and-forget after the story commits (no outbox). A crash between commit and send loses that push. Acceptable at this scale.
 - New uploads go to `uploads/{uid}/...` in Storage; backend rejects story/profile image URLs outside our bucket or outside the caller's folder. Imported legacy URLs are kept as-is.
 - Story creation keeps today's rule: nearest place wins, no max distance. If no places exist → 422.
-- Neon: direct (non-pooled) connection string with `sslmode=require&pool_max_conns=5`; the API keeps its own pgx pool.
+- Neon: direct (non-pooled) connection string with `sslmode=verify-full&pool_max_conns=5`; the API keeps its own pgx pool.
 - App id changes from `com.memopin.app` to a real one before registering apps in the new project (Play Store rejects `com.example.*`).
 
 ## Decided by user

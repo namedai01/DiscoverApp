@@ -31,7 +31,7 @@
 
 ## Review Focus
 
-1. Vietnamese text in any response ("Hồ Gươm", "user +84…") → shown correctly, not mojibake; `http`'s `response.body` would decode as Latin-1 because the backend sends no charset. (Task 1: `decodes UTF-8 JSON without a charset`)
+1. Vietnamese text in any response ("Hồ Gươm") → shown correctly, not mojibake. The backend now sends `application/json; charset=utf-8`, but the client still decodes bytes as UTF-8 explicitly so it never depends on the header. (Task 1: `decodes UTF-8 JSON without a charset`)
 2. Expired ID token mid-session → one forced token refresh and one retry, then a typed 401; a signed-out user hitting an auth route → typed 401 without a network call; never a retry loop. (Task 1: `retries once with a forced token refresh on 401`, `auth call while signed out throws without sending`)
 3. No network, a 20 s timeout, a 504 with an empty body or a 502 HTML page → `ApiException` with a readable `userMessage`, never an uncaught `FormatException`/`SocketException` or a red screen. (Task 1: `network failure…`, `timeout…`, `non-JSON error body…`)
 4. Push unavailable (iOS without APNs, `getToken` throws, permission denied) or logout while offline / backend hanging → sign-in still loads the profile, and logout still signs out within 5 s. (Task 6: `onSignedIn when fcmToken throws…`, `beforeSignOut completes when DELETE hangs`)
@@ -286,7 +286,7 @@ Precondition (check first; if it fails, stop and report `BLOCKED: run docs/setup
 - [ ] **Step 2:** `flutter analyze --no-fatal-infos && flutter test` → clean, PASS.
 - [ ] **Step 3:** `flutter build apk --debug` → `✓ Built build/app/outputs/flutter-apk/app-debug.apk`.
 - [ ] **Step 4: Manual smoke test** (Android emulator, `API_BASE_URL=http://10.0.2.2:8080` or the Cloud Run URL; report each item pass/fail):
-  1. Sign in with `+84 900000001` / `123456` → My Profile shows `user +84900000001`; backend `devices` has a row for that user.
+  1. Sign in with `+84 900000001` / `123456` → My Profile shows `user <first 6 chars of the Firebase uid>` (never the phone number); backend `devices` has a row for that user.
   2. Explore lists the seeded places with story counts; search `hồ` filters; the Map shows one marker per place.
   3. Post a story with a photo → `Posted at <place>`; it shows under that place's Local stories and in My Profile; the Storage object is under `uploads/<uid>/`.
   4. A second test account follows the first → the first posts again → the second device gets a push (app in background) and a heads-up notification (app in foreground); tapping it opens the place.
