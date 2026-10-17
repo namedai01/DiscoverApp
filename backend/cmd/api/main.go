@@ -19,6 +19,7 @@ import (
 	"github.com/namedai01/memopin/backend/internal/auth"
 	"github.com/namedai01/memopin/backend/internal/config"
 	"github.com/namedai01/memopin/backend/internal/db"
+	"github.com/namedai01/memopin/backend/internal/notify"
 	"github.com/namedai01/memopin/backend/internal/server"
 )
 
@@ -60,7 +61,7 @@ func run() error {
 
 	srv := &http.Server{
 		Addr:              net.JoinHostPort("", cfg.Port),
-		Handler:           server.NewRouter(server.Deps{Pool: pool, Cfg: cfg, Verifier: verifier}),
+		Handler:           server.NewRouter(server.Deps{Pool: pool, Cfg: cfg, Verifier: verifier, Notifier: notify.Noop{}}),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,

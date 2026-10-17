@@ -88,20 +88,28 @@ func Decode(r *http.Request, v any) error {
 	return nil
 }
 
-// Page parses limit and offset from the query string. limit defaults to 20
-// and is clamped to 1..100; offset defaults to 0. Non-integer values, a
-// negative offset and an offset above 100000 are 400s.
-func Page(r *http.Request) (limit, offset int, err error) {
-	q := r.URL.Query()
-	limit = defaultLimit
-	if s := q.Get("limit"); s != "" {
-		limit, err = strconv.Atoi(s)
-		if err != nil {
-			return 0, 0, BadRequest("limit must be an integer")
-		}
-		limit = min(max(limit, 1), maxLimit)
+// Limit parses limit from the query string: it defaults to 20, is clamped to
+// 1..100, and a non-integer value is a 400.
+func Limit(r *http.Request) (int, error) {
+	s := r.URL.Query().Get("limit")
+	if s == "" {
+		return defaultLimit, nil
 	}
-	if s := q.Get("offset"); s != "" {
+	limit, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, BadRequest("limit must be an integer")
+	}
+	return min(max(limit, 1), maxLimit), nil
+}
+
+// Page parses limit (see Limit) and offset from the query string. offset
+// defaults to 0; non-integer values, a negative offset and an offset above
+// 100000 are 400s.
+func Page(r *http.Request) (limit, offset int, err error) {
+	if limit, err = Limit(r); err != nil {
+		return 0, 0, err
+	}
+	if s := r.URL.Query().Get("offset"); s != "" {
 		offset, err = strconv.Atoi(s)
 		if err != nil || offset < 0 || offset > maxOffset {
 			return 0, 0, BadRequest("offset must be an integer from 0 to 100000")
