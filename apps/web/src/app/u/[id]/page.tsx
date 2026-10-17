@@ -15,7 +15,7 @@ export default async function UserPage({
   const { id } = await params;
   return (
     <RequireAuth reason="see profiles">
-      <UserProfile id={id} />
+      <UserProfile key={id} id={id} />
     </RequireAuth>
   );
 }
