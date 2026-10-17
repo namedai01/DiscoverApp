@@ -30,6 +30,20 @@ class _MyProfilePageState extends State<MyProfilePage> {
   Future<AppUser>? _me;
   String? _meUid;
   bool _updatingPhoto = false;
+  bool _signingOut = false;
+
+  /// Unregisters the device and signs out; the buttons stay disabled meanwhile.
+  Future<void> _signOut() async {
+    if (_signingOut) return;
+    setState(() => _signingOut = true);
+    try {
+      await signOut();
+    } catch (e) {
+      debugPrint('sign out failed: $e');
+    } finally {
+      if (mounted) setState(() => _signingOut = false);
+    }
+  }
 
   void _loadMe() => setState(() => _me = api.getMe());
 
@@ -118,7 +132,10 @@ class _MyProfilePageState extends State<MyProfilePage> {
                       : 'Could not load your profile.',
                 ),
                 TextButton(onPressed: _loadMe, child: const Text('Retry')),
-                TextButton(onPressed: signOut, child: const Text('Sign out')),
+                TextButton(
+                  onPressed: _signingOut ? null : _signOut,
+                  child: const Text('Sign out'),
+                ),
               ],
             ),
           );
@@ -168,10 +185,21 @@ class _MyProfilePageState extends State<MyProfilePage> {
                                   onPressed: editDisplayName,
                                   icon: Icon(Icons.edit_outlined),
                                 ),
-                                IconButton(
-                                  onPressed: signOut,
-                                  icon: Icon(Icons.logout),
-                                ),
+                                _signingOut
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(12),
+                                        child: SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      )
+                                    : IconButton(
+                                        onPressed: _signOut,
+                                        icon: Icon(Icons.logout),
+                                      ),
                               ],
                             ),
                           ),
