@@ -15,6 +15,7 @@ import (
 	"github.com/namedai01/memopin/backend/internal/auth"
 	"github.com/namedai01/memopin/backend/internal/config"
 	"github.com/namedai01/memopin/backend/internal/db/store"
+	"github.com/namedai01/memopin/backend/internal/devices"
 	"github.com/namedai01/memopin/backend/internal/follows"
 	"github.com/namedai01/memopin/backend/internal/httpx"
 	"github.com/namedai01/memopin/backend/internal/locations"
@@ -60,6 +61,7 @@ func NewRouter(d Deps) http.Handler {
 		Q: q, Bucket: d.Cfg.StorageBucket, DefaultPhotoURL: d.Cfg.DefaultUserPhotoURL, Notifier: notifier,
 	}
 	followsH := &follows.Handler{Q: q, DefaultPhotoURL: d.Cfg.DefaultUserPhotoURL}
+	devicesH := &devices.Handler{Q: q, DefaultPhotoURL: d.Cfg.DefaultUserPhotoURL}
 
 	r.Route("/v1", func(r chi.Router) {
 		r.Get("/locations", locationsH.List)
@@ -75,6 +77,8 @@ func NewRouter(d Deps) http.Handler {
 			r.Post("/stories", storiesH.Create)
 			r.Put("/users/{id}/follow", followsH.Follow)
 			r.Delete("/users/{id}/follow", followsH.Unfollow)
+			r.Post("/me/devices", devicesH.Register)
+			r.Delete("/me/devices/{token}", devicesH.Unregister)
 		})
 	})
 	return r
