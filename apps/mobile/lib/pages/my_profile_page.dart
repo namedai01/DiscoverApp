@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:exploreapp/pages/user_stories_timeline.dart';
+import 'package:memopin/pages/user_stories_timeline.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';

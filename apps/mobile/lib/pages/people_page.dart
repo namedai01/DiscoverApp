@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:exploreapp/components/explore_list.dart';
-import 'package:exploreapp/components/page_heading.dart';
-import 'package:exploreapp/components/search_bar.dart';
-import 'package:exploreapp/logic/bloc.dart';
-import 'package:exploreapp/logic/search_results.dart';
+import 'package:memopin/components/explore_list.dart';
+import 'package:memopin/components/page_heading.dart';
+import 'package:memopin/components/search_bar.dart';
+import 'package:memopin/logic/bloc.dart';
+import 'package:memopin/logic/search_results.dart';
 import 'package:flutter/material.dart';
 
 import '../const.dart';

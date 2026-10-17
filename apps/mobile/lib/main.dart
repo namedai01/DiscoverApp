@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:exploreapp/const.dart';
+import 'package:memopin/const.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -140,8 +140,8 @@ Future<void> showNewStoryNotification(String uid) async {
   const platformChannelSpecifics = NotificationDetails(
     android: AndroidNotificationDetails(
       '1',
-      'Explore App',
-      channelDescription: 'Explore App',
+      'Memopin',
+      channelDescription: 'Memopin',
       importance: Importance.max,
       priority: Priority.high,
       ticker: 'ticker',
@@ -180,7 +180,7 @@ class _MyAppState extends State<MyApp> {
         final Color primary = themeChooser(snapshot.data);
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'Explore App',
+          title: 'Memopin',
           theme: ThemeData(
             // Keep the original Material 2 look; Material 3 restyles every widget.
             useMaterial3: false,

@@ -1,4 +1,4 @@
-import 'package:exploreapp/components/user_card.dart';
+import 'package:memopin/components/user_card.dart';
 import 'package:flutter/material.dart';
 
 import './main_card.dart';

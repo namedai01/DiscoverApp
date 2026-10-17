@@ -1,5 +1,5 @@
-import 'package:exploreapp/pages/user_public_profile_page.dart';
-import 'package:exploreapp/utils.dart';
+import 'package:memopin/pages/user_public_profile_page.dart';
+import 'package:memopin/utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 

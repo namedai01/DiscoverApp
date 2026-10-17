@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:exploreapp/utils.dart';
+import 'package:memopin/utils.dart';
 import 'package:flutter/material.dart';
 
 import '../const.dart';

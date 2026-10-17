@@ -1,4 +1,4 @@
-package com.example.exploreapp
+package com.memopin.app
 
 import io.flutter.embedding.android.FlutterActivity
 

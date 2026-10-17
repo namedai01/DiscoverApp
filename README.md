@@ -1,17 +1,17 @@
-# DISCOVERAPP
+# MEMOPIN
 
-Monorepo for Explore App.
+Monorepo for Memopin.
 
 ```
 apps/
-  mobile/        Flutter app (package `exploreapp`)
+  mobile/        Flutter app (package `memopin`)
 ```
 
 Planned: `apps/web/` (web client), `backend/` (server). Add each as its own top-level project with its own README.
 
 ## Features
 
-Explore App lets users browse places, post photo stories tied to a place, follow other users, and see places on a map. Backend is Firebase (Auth, Firestore, Storage). The app has 5 tabs: Explore, People, Maps, Create Story, My Profile.
+Memopin lets users browse places, post photo stories tied to a place, follow other users, and see places on a map. Backend is Firebase (Auth, Firestore, Storage). The app has 5 tabs: Explore, People, Maps, Create Story, My Profile.
 
 ### Explore places
 

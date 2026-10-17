@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:exploreapp/logic/map_logic.dart';
-import 'package:exploreapp/pages/user_stories_timeline.dart';
-import 'package:exploreapp/utils.dart';
+import 'package:memopin/logic/map_logic.dart';
+import 'package:memopin/pages/user_stories_timeline.dart';
+import 'package:memopin/utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 

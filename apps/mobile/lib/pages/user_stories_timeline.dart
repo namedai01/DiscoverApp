@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:exploreapp/components/list_card.dart';
-import 'package:exploreapp/const.dart';
-import 'package:exploreapp/pages/story_page.dart';
-import 'package:exploreapp/utils.dart';
+import 'package:memopin/components/list_card.dart';
+import 'package:memopin/const.dart';
+import 'package:memopin/pages/story_page.dart';
+import 'package:memopin/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:timelines_plus/timelines_plus.dart';
 

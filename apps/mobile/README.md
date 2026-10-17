@@ -1,4 +1,4 @@
-# Explore App (mobile)
+# Memopin (mobile)
 
 Flutter 3.47+ / Dart 3.13+, null-safe.
 

@@ -88,7 +88,7 @@ class _MapsPageState extends State<MapsPage> {
               children: [
                 TileLayer(
                   urlTemplate: AppConfig.mapTileUrl,
-                  userAgentPackageName: 'com.example.exploreapp',
+                  userAgentPackageName: 'com.memopin.app',
                 ),
                 MarkerLayer(
                   markers: buildMarkers(locations, _onLocationTapped),
