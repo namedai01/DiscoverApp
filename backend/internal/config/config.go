@@ -11,7 +11,7 @@ import (
 
 // Config holds every setting the API reads. Later features only read fields.
 type Config struct {
-	Env                 string // "dev" | "prod"
+	Env                 string // "dev" | "prod"; defaults to prod so a missing APP_ENV fails closed
 	Port                string
 	DatabaseURL         string
 	FirebaseProjectID   string
@@ -24,7 +24,7 @@ type Config struct {
 // Load reads the environment and validates it.
 func Load() (Config, error) {
 	cfg := Config{
-		Env:                 getenv("APP_ENV", "dev"),
+		Env:                 getenv("APP_ENV", "prod"),
 		Port:                getenv("PORT", "8080"),
 		DatabaseURL:         os.Getenv("DATABASE_URL"),
 		FirebaseProjectID:   os.Getenv("FIREBASE_PROJECT_ID"),

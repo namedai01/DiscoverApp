@@ -2,7 +2,7 @@ package auth
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -14,7 +14,7 @@ type Fake struct{}
 func (Fake) Verify(_ context.Context, token string) (Identity, error) {
 	parts := strings.SplitN(token, ":", 3)
 	if len(parts) != 3 || parts[0] != "fake" || parts[1] == "" {
-		return Identity{}, errors.New("auth: malformed fake token")
+		return Identity{}, fmt.Errorf("%w: malformed fake token", ErrInvalidToken)
 	}
 	return Identity{UID: parts[1], Phone: parts[2]}, nil
 }

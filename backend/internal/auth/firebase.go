@@ -27,6 +27,9 @@ func NewFirebase(ctx context.Context, app *firebase.App) (Verifier, error) {
 func (f *firebaseVerifier) Verify(ctx context.Context, idToken string) (Identity, error) {
 	tok, err := f.client.VerifyIDToken(ctx, idToken)
 	if err != nil {
+		if fbauth.IsIDTokenInvalid(err) || fbauth.IsIDTokenExpired(err) {
+			return Identity{}, fmt.Errorf("%w: %w", ErrInvalidToken, err)
+		}
 		return Identity{}, err
 	}
 	phone, _ := tok.Claims["phone_number"].(string)

@@ -51,11 +51,27 @@ func TestLoad_DefaultsAndLists(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Port != "8080" || cfg.Env != "dev" || cfg.AuthMode != "firebase" {
+	if cfg.Port != "8080" || cfg.Env != "prod" || cfg.AuthMode != "firebase" {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	if len(cfg.CORSOrigins) != 2 || cfg.CORSOrigins[0] != "http://a.test" || cfg.CORSOrigins[1] != "http://b.test" {
 		t.Fatalf("CORSOrigins = %q", cfg.CORSOrigins)
+	}
+}
+
+// A missing APP_ENV must fail closed: prod, so fake auth is refused and CORS
+// origins are required.
+func TestLoad_AppEnvDefaultsToProd(t *testing.T) {
+	setenv(t, map[string]string{"DATABASE_URL": "postgres://x", "AUTH_MODE": "fake"})
+	if _, err := Load(); err == nil {
+		t.Fatal("AUTH_MODE=fake without APP_ENV must be refused")
+	}
+
+	setenv(t, map[string]string{
+		"DATABASE_URL": "postgres://x", "FIREBASE_PROJECT_ID": "p", "STORAGE_BUCKET": "b",
+	})
+	if _, err := Load(); err == nil {
+		t.Fatal("missing APP_ENV must require CORS_ORIGINS")
 	}
 }
 
@@ -68,11 +84,11 @@ func TestLoad_RejectsBadValues(t *testing.T) {
 			"DATABASE_URL": "postgres://x", "APP_ENV": "prod", "AUTH_MODE": "firebase",
 			"FIREBASE_PROJECT_ID": "p", "STORAGE_BUCKET": "b",
 		},
-		"firebase without project id": {"DATABASE_URL": "postgres://x", "AUTH_MODE": "firebase", "STORAGE_BUCKET": "b"},
-		"firebase without bucket":     {"DATABASE_URL": "postgres://x", "AUTH_MODE": "firebase", "FIREBASE_PROJECT_ID": "p"},
-		"port not a number":           {"DATABASE_URL": "postgres://x", "AUTH_MODE": "fake", "PORT": "http"},
-		"port zero":                   {"DATABASE_URL": "postgres://x", "AUTH_MODE": "fake", "PORT": "0"},
-		"port too large":              {"DATABASE_URL": "postgres://x", "AUTH_MODE": "fake", "PORT": "65536"},
+		"firebase without project id": {"DATABASE_URL": "postgres://x", "APP_ENV": "dev", "AUTH_MODE": "firebase", "STORAGE_BUCKET": "b"},
+		"firebase without bucket":     {"DATABASE_URL": "postgres://x", "APP_ENV": "dev", "AUTH_MODE": "firebase", "FIREBASE_PROJECT_ID": "p"},
+		"port not a number":           {"DATABASE_URL": "postgres://x", "APP_ENV": "dev", "AUTH_MODE": "fake", "PORT": "http"},
+		"port zero":                   {"DATABASE_URL": "postgres://x", "APP_ENV": "dev", "AUTH_MODE": "fake", "PORT": "0"},
+		"port too large":              {"DATABASE_URL": "postgres://x", "APP_ENV": "dev", "AUTH_MODE": "fake", "PORT": "65536"},
 	}
 	for name, env := range cases {
 		t.Run(name, func(t *testing.T) {

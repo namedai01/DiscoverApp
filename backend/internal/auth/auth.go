@@ -3,8 +3,12 @@ package auth
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
+
+	chimw "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/namedai01/memopin/backend/internal/httpx"
 )
@@ -15,7 +19,14 @@ type Identity struct {
 	Phone string // empty when the token carries no phone_number claim
 }
 
-// Verifier turns a bearer token into an Identity or an error.
+// ErrInvalidToken is returned (possibly wrapped) by a Verifier when the token
+// itself is rejected: malformed, forged, wrong audience or expired. Any other
+// Verify error means the verifier could not decide (for example Firebase's key
+// endpoint is unreachable) and is answered with 503, not 401.
+var ErrInvalidToken = errors.New("auth: invalid token")
+
+// Verifier turns a bearer token into an Identity or an error. Rejections of
+// the token itself must wrap ErrInvalidToken.
 type Verifier interface {
 	Verify(ctx context.Context, idToken string) (Identity, error)
 }
@@ -40,6 +51,13 @@ func Optional(v Verifier) func(http.Handler) http.Handler {
 	return middleware(v, false)
 }
 
+// errVerifierUnavailable is the 503 for a verifier failure that is not a token rejection.
+var errVerifierUnavailable = &httpx.APIError{
+	Status:  http.StatusServiceUnavailable,
+	Code:    "internal",
+	Message: "authentication temporarily unavailable",
+}
+
 func middleware(v Verifier, required bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +77,15 @@ func middleware(v Verifier, required bool) func(http.Handler) http.Handler {
 			}
 			id, err := v.Verify(r.Context(), token)
 			if err != nil {
-				httpx.Error(w, httpx.Unauthorized("invalid or expired token"))
+				slog.Warn("auth: token verification failed",
+					"err", err,
+					"invalid_token", errors.Is(err, ErrInvalidToken),
+					"request_id", chimw.GetReqID(r.Context()))
+				if errors.Is(err, ErrInvalidToken) {
+					httpx.Error(w, httpx.Unauthorized("invalid or expired token"))
+				} else {
+					httpx.Error(w, errVerifierUnavailable)
+				}
 				return
 			}
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, id)))
