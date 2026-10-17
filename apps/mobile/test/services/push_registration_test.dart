@@ -208,4 +208,37 @@ void main() {
     ]);
     expect(calls.last, startsWith('DELETE'));
   });
+
+  test('beforeSignOut after a failed onSignedIn deletes the current FCM token',
+      () async {
+    final reg = make(
+      onMe: () async => throw http.ClientException('offline'),
+    );
+    await expectLater(reg.onSignedIn(), throwsA(anything));
+    calls.clear();
+    await reg.beforeSignOut();
+    expect(calls, ['DELETE /v1/me/devices/t%3A1']);
+  });
+
+  test('beforeSignOut with no known token and a failing lookup completes',
+      () async {
+    final reg = make(
+      fcmToken: () async => throw StateError('no apns'),
+      onMe: () async => throw http.ClientException('offline'),
+    );
+    await expectLater(reg.onSignedIn(), throwsA(anything));
+    calls.clear();
+    await reg.beforeSignOut();
+    expect(calls, isEmpty);
+  });
+
+  test('beforeSignOut with no known token and a hanging lookup is bounded',
+      () async {
+    final reg = make(
+      signOutTimeout: const Duration(milliseconds: 50),
+      fcmToken: () => Completer<String?>().future,
+    );
+    await reg.beforeSignOut().timeout(const Duration(seconds: 1));
+    expect(calls, isEmpty);
+  });
 }

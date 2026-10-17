@@ -25,6 +25,11 @@ class PushRegistration {
   bool _signedIn = false;
   String? _lastToken;
 
+  /// True after `GET /v1/me` failed for the current epoch: the user is signed
+  /// in to Firebase but we never learned this device's token, and a row may
+  /// still exist from an earlier session.
+  bool _signInFailed = false;
+
   /// Bumped by [beforeSignOut]. A sign-in or refresh that started under an
   /// older epoch must not register the device for the user who just left.
   int _epoch = 0;
@@ -32,8 +37,15 @@ class PushRegistration {
   /// Loads the profile (errors propagate), then registers this device.
   Future<AppUser> onSignedIn() async {
     final epoch = _epoch;
-    final user = await _api.getMe();
+    final AppUser user;
+    try {
+      user = await _api.getMe();
+    } catch (_) {
+      if (epoch == _epoch) _signInFailed = true;
+      rethrow;
+    }
     if (epoch != _epoch) return user;
+    _signInFailed = false;
     _signedIn = true;
     try {
       final token = await _fcmToken();
@@ -52,12 +64,30 @@ class PushRegistration {
 
   /// Unregisters this device so the next user of the phone gets no pushes.
   /// Never throws and never takes longer than [signOutTimeout].
+  ///
+  /// When sign-in never got far enough to learn the token (offline start, a
+  /// 503 on `GET /v1/me`), the current FCM token is looked up here instead; the
+  /// backend only deletes the caller's own row, so this is safe.
   Future<void> beforeSignOut() async {
-    final token = _lastToken;
+    var token = _lastToken;
+    final lookUp = token == null && _signInFailed;
     _epoch++;
     _signedIn = false;
+    _signInFailed = false;
     _lastToken = null;
-    if (token != null) await _unregister(token);
+    if (token != null) {
+      await _unregister(token);
+    } else if (lookUp) {
+      try {
+        await (() async {
+          token = await _fcmToken();
+          final t = token;
+          if (t != null) await _api.unregisterDevice(t);
+        })().timeout(signOutTimeout);
+      } catch (e) {
+        debugPrint('push: sign-out cleanup failed: $e');
+      }
+    }
   }
 
   Future<void> _register(String token, int epoch) async {
