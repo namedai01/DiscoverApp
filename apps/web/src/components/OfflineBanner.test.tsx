@@ -1,7 +1,11 @@
 import { act, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/render";
 import { OfflineBanner } from "./OfflineBanner";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const TEXT = "You're offline. Some content may be out of date.";
 
@@ -22,9 +26,8 @@ describe("OfflineBanner", () => {
 
 describe("OfflineBanner initial state", () => {
   it("shows when the page loads while offline", () => {
-    const spy = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     renderWithProviders(<OfflineBanner />);
     expect(screen.getByText(TEXT)).toBeInTheDocument();
-    spy.mockRestore();
   });
 });
