@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AccentInit } from "@/components/AccentInit";
 import { NavBar } from "@/components/NavBar";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { Providers } from "@/components/Providers";
 import { publicEnv } from "@/lib/env";
 import "./globals.css";
 
@@ -24,7 +25,7 @@ export default function RootLayout({
         <OfflineBanner />
         <NavBar />
         <main className="mx-auto max-w-3xl px-4 pt-4 pb-24 md:pt-20 md:pb-8">
-          {children}
+          <Providers>{children}</Providers>
         </main>
       </body>
     </html>
