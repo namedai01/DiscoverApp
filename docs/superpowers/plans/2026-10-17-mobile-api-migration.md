@@ -290,6 +290,6 @@ Precondition (check first; if it fails, stop and report `BLOCKED: run docs/setup
   2. Explore lists the seeded places with story counts; search `hồ` filters; the Map shows one marker per place.
   3. Post a story with a photo → `Posted at <place>`; it shows under that place's Local stories and in My Profile; the Storage object is under `uploads/<uid>/`.
   4. A second test account follows the first → the first posts again → the second device gets a push (app in background) and a heads-up notification (app in foreground); tapping it opens the place.
-  5. Logout → that device's row is gone from `devices`; Create Story shows `Please Login :((((`.
+  5. Logout → that device's row is gone from `devices`; tapping Post on Create Story shows `Please sign in to post a story`.
 - [ ] **Step 5 (iOS, optional; needs §6 APNs plus a paid Apple account):** in Xcode, enable the Push Notifications capability on Runner (adds `aps-environment` to `Runner.entitlements`). Run on a real device and repeat smoke item 4. Skip and report if it is not available.
 - [ ] **Step 6: Commit** `git add lib/main.dart lib/firebase_options.dart android/app/google-services.json ios/Runner/GoogleService-Info.plist` (plus `firebase.json`, `ios/Runner/Runner.entitlements`, `ios/Runner.xcodeproj/project.pbxproj` if changed) → `feat(mobile): initialize firebase from flutterfire options`. These files hold client identifiers, not secrets (setup guide §4).
