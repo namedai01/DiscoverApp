@@ -148,7 +148,7 @@ gcloud run deploy memopin-api --source backend --region <REGION> \
 
 ## 8. Local development
 
-- Postgres runs in Docker: `cd backend && make dev` starts `postgis/postgis:16-3.4` from `compose.yaml` and the API. Local connection string (in `backend/.env`, gitignored): `postgres://memopin:memopin@localhost:5432/memopin?sslmode=disable`.
+- Postgres runs in Docker: `cd backend && make dev` starts `postgis/postgis:16-3.4` from `compose.yaml` and the API. Local connection string (in `backend/.env`, gitignored): `postgres://memopin:memopin@localhost:5433/memopin?sslmode=disable`.
 - Firebase Admin (token verify, FCM) uses `gcloud auth application-default login`. Use `AUTH_MODE=fake` when you do not want real tokens.
 - Seeding Neon from your laptop: `DATABASE_URL='<neon direct url>' go run ./cmd/seed`.
 - **Never** put `DATABASE_URL` in `apps/mobile/.env` or any web env: those files ship inside the app/bundle.
