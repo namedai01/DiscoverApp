@@ -4,6 +4,16 @@ import { truncate } from "@/lib/format";
 
 const DESCRIPTION_MAX = 160;
 
+// Empty or malformed image URLs would produce broken og:image tags.
+function isValidUrl(value: string): boolean {
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function buildPlaceMetadata(
   location: Location,
   siteUrl: string,
@@ -14,7 +24,9 @@ export function buildPlaceMetadata(
     DESCRIPTION_MAX,
   );
   const path = `/places/${encodeURIComponent(location.id)}`;
-  const images = location.imageUrl ? [{ url: location.imageUrl }] : undefined;
+  const images = isValidUrl(location.imageUrl)
+    ? [{ url: location.imageUrl }]
+    : undefined;
 
   return {
     title,

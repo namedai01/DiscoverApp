@@ -1,28 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { cache } from "react";
 import { PlaceStories } from "@/components/PlaceStories";
 import { RemoteImage } from "@/components/RemoteImage";
-import type { Api } from "@/lib/api/client";
-import { isApiError } from "@/lib/api/errors";
 import { serverApi } from "@/lib/api/server";
-import type { Location } from "@/lib/api/types";
 import { publicEnv } from "@/lib/env";
 import { directionsUrl } from "@/lib/format";
+import { loadPlace } from "@/lib/places";
 import { buildPlaceMetadata } from "@/lib/seo";
-
-// Shared by generateMetadata and the page: one backend call per request.
-export const loadPlace = cache(
-  async (id: string, api: Api = serverApi): Promise<Location> => {
-    try {
-      return await api.getLocation(id);
-    } catch (e) {
-      if (isApiError(e, "not_found")) notFound();
-      throw e;
-    }
-  },
-);
 
 type Props = {
   params: Promise<{ id: string }>;

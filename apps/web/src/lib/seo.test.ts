@@ -41,4 +41,11 @@ describe("buildPlaceMetadata", () => {
     expect(meta.openGraph?.images).toBeUndefined();
     expect(cardOf(meta)).toBe("summary");
   });
+
+  it("drops an image url that is not a valid URL", () => {
+    const meta = buildPlaceMetadata(aLocation({ imageUrl: "not a url" }), SITE);
+    expect(meta.openGraph?.images).toBeUndefined();
+    expect(cardOf(meta)).toBe("summary");
+    expect((meta.twitter as { images?: unknown }).images).toBeUndefined();
+  });
 });

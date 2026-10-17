@@ -10,7 +10,7 @@ const notFound = vi.hoisted(() =>
 );
 vi.mock("next/navigation", () => ({ notFound }));
 
-import { loadPlace } from "./page";
+import { loadPlace } from "./places";
 
 function apiWith(getLocation: Api["getLocation"]): Api {
   return { getLocation } as Api;
