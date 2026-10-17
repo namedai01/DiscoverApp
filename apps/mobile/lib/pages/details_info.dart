@@ -121,7 +121,7 @@ class _DetailsInfoState extends State<DetailsInfo> {
         children: <Widget>[
           Text(error.userMessage, textAlign: TextAlign.center),
           TextButton(
-            onPressed: empty ? _pager.refresh : _pager.loadMore,
+            onPressed: _pager.hasMore ? _pager.loadMore : _pager.refresh,
             child: Text('Retry'),
           ),
         ],

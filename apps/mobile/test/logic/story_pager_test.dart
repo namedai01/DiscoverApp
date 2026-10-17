@@ -103,18 +103,15 @@ void main() {
 
   test('refresh during an in-flight loadMore discards the stale page', () async {
     final gate = Completer<Paged<Story>>();
-    var fresh = false;
     final pager = StoryPager((c) {
       if (c == null) return Future.value(page(['a', 'b'], 'c1'));
       return gate.future;
     });
     await pager.refresh();
     final more = pager.loadMore();
-    fresh = true;
     await pager.refresh();
     gate.complete(page(['c', 'd'], null));
     await more;
-    expect(fresh, isTrue);
     expect(ids(pager), ['a', 'b']);
     expect(pager.hasMore, isTrue);
     expect(pager.loading, isFalse);

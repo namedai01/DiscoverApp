@@ -163,7 +163,10 @@ class _UserStoriesTimeLineState extends State<UserStoriesTimeLine> {
       return Column(
         children: <Widget>[
           Text(_pager.error!.userMessage, textAlign: TextAlign.center),
-          TextButton(onPressed: _pager.loadMore, child: Text('Retry')),
+          TextButton(
+            onPressed: _pager.hasMore ? _pager.loadMore : _pager.refresh,
+            child: Text('Retry'),
+          ),
         ],
       );
     }
