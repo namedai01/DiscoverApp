@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Device struct {
@@ -26,7 +25,7 @@ type Follow struct {
 
 type Location struct {
 	ID            uuid.UUID
-	SeedKey       pgtype.Text
+	SeedKey       *string
 	VenueName     string
 	VenueLocation string
 	Description   string
@@ -49,8 +48,8 @@ type Story struct {
 type User struct {
 	ID          string
 	DisplayName string
-	PhotoUrl    pgtype.Text
-	Phone       pgtype.Text
+	PhotoUrl    *string
+	Phone       *string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

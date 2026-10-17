@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -44,6 +45,20 @@ func Load() (Config, error) {
 	}
 	if cfg.AuthMode == "fake" && cfg.Env != "dev" {
 		return Config{}, errors.New("config: AUTH_MODE=fake is only allowed when APP_ENV=dev")
+	}
+	if cfg.AuthMode == "firebase" {
+		if cfg.FirebaseProjectID == "" {
+			return Config{}, errors.New("config: FIREBASE_PROJECT_ID is required when AUTH_MODE=firebase")
+		}
+		if cfg.StorageBucket == "" {
+			return Config{}, errors.New("config: STORAGE_BUCKET is required when AUTH_MODE=firebase")
+		}
+	}
+	if cfg.Env == "prod" && len(cfg.CORSOrigins) == 0 {
+		return Config{}, errors.New("config: CORS_ORIGINS is required when APP_ENV=prod")
+	}
+	if port, err := strconv.Atoi(cfg.Port); err != nil || port < 1 || port > 65535 {
+		return Config{}, fmt.Errorf("config: PORT must be an integer between 1 and 65535, got %q", cfg.Port)
 	}
 	return cfg, nil
 }

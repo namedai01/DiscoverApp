@@ -12,14 +12,18 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/namedai01/memopin/backend/internal/auth"
 	"github.com/namedai01/memopin/backend/internal/config"
+	"github.com/namedai01/memopin/backend/internal/db/store"
 	"github.com/namedai01/memopin/backend/internal/httpx"
+	"github.com/namedai01/memopin/backend/internal/users"
 )
 
 // Deps are the collaborators handlers need. Later tasks add fields.
 type Deps struct {
-	Pool *pgxpool.Pool
-	Cfg  config.Config
+	Pool     *pgxpool.Pool
+	Cfg      config.Config
+	Verifier auth.Verifier
 }
 
 // NewRouter wires middleware and routes.
@@ -38,6 +42,17 @@ func NewRouter(d Deps) http.Handler {
 	r.Use(middleware.Timeout(15 * time.Second))
 
 	r.Get("/healthz", healthz(d.Pool))
+
+	q := store.New(d.Pool)
+	usersH := &users.Handler{Q: q, Bucket: d.Cfg.StorageBucket, DefaultPhotoURL: d.Cfg.DefaultUserPhotoURL}
+
+	r.Route("/v1", func(r chi.Router) {
+		r.Group(func(r chi.Router) {
+			r.Use(auth.Required(d.Verifier))
+			r.Get("/me", usersH.GetMe)
+			r.Patch("/me", usersH.PatchMe)
+		})
+	})
 	return r
 }
 

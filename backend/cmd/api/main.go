@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -12,8 +13,10 @@ import (
 	"syscall"
 	"time"
 
+	firebase "firebase.google.com/go/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/namedai01/memopin/backend/internal/auth"
 	"github.com/namedai01/memopin/backend/internal/config"
 	"github.com/namedai01/memopin/backend/internal/db"
 	"github.com/namedai01/memopin/backend/internal/server"
@@ -50,9 +53,14 @@ func run() error {
 		return err
 	}
 
+	verifier, err := newVerifier(ctx, cfg)
+	if err != nil {
+		return err
+	}
+
 	srv := &http.Server{
 		Addr:              net.JoinHostPort("", cfg.Port),
-		Handler:           server.NewRouter(server.Deps{Pool: pool, Cfg: cfg}),
+		Handler:           server.NewRouter(server.Deps{Pool: pool, Cfg: cfg, Verifier: verifier}),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -78,4 +86,19 @@ func run() error {
 		return err
 	}
 	return nil
+}
+
+// newVerifier picks the token verifier. Fake mode (dev only, enforced by
+// config) needs no Google credentials; firebase mode uses Application Default
+// Credentials.
+func newVerifier(ctx context.Context, cfg config.Config) (auth.Verifier, error) {
+	if cfg.AuthMode == "fake" {
+		slog.Warn("AUTH_MODE=fake: accepting unauthenticated fake tokens")
+		return auth.Fake{}, nil
+	}
+	app, err := firebase.NewApp(ctx, &firebase.Config{ProjectID: cfg.FirebaseProjectID})
+	if err != nil {
+		return nil, fmt.Errorf("firebase app: %w", err)
+	}
+	return auth.NewFirebase(ctx, app)
 }

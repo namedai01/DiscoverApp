@@ -42,8 +42,10 @@ func TestLoad_FakeAuthOnlyInDev(t *testing.T) {
 
 func TestLoad_DefaultsAndLists(t *testing.T) {
 	setenv(t, map[string]string{
-		"DATABASE_URL": "postgres://x",
-		"CORS_ORIGINS": "http://a.test, http://b.test ,",
+		"DATABASE_URL":        "postgres://x",
+		"CORS_ORIGINS":        "http://a.test, http://b.test ,",
+		"FIREBASE_PROJECT_ID": "proj",
+		"STORAGE_BUCKET":      "proj.firebasestorage.app",
 	})
 	cfg, err := Load()
 	if err != nil {
@@ -62,6 +64,15 @@ func TestLoad_RejectsBadValues(t *testing.T) {
 		"missing database url": {},
 		"bad env":              {"DATABASE_URL": "postgres://x", "APP_ENV": "staging"},
 		"bad auth mode":        {"DATABASE_URL": "postgres://x", "AUTH_MODE": "magic"},
+		"prod without cors": {
+			"DATABASE_URL": "postgres://x", "APP_ENV": "prod", "AUTH_MODE": "firebase",
+			"FIREBASE_PROJECT_ID": "p", "STORAGE_BUCKET": "b",
+		},
+		"firebase without project id": {"DATABASE_URL": "postgres://x", "AUTH_MODE": "firebase", "STORAGE_BUCKET": "b"},
+		"firebase without bucket":     {"DATABASE_URL": "postgres://x", "AUTH_MODE": "firebase", "FIREBASE_PROJECT_ID": "p"},
+		"port not a number":           {"DATABASE_URL": "postgres://x", "AUTH_MODE": "fake", "PORT": "http"},
+		"port zero":                   {"DATABASE_URL": "postgres://x", "AUTH_MODE": "fake", "PORT": "0"},
+		"port too large":              {"DATABASE_URL": "postgres://x", "AUTH_MODE": "fake", "PORT": "65536"},
 	}
 	for name, env := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -70,5 +81,16 @@ func TestLoad_RejectsBadValues(t *testing.T) {
 				t.Fatal("expected error")
 			}
 		})
+	}
+}
+
+func TestLoad_AcceptsValidProd(t *testing.T) {
+	setenv(t, map[string]string{
+		"DATABASE_URL": "postgres://x", "APP_ENV": "prod", "AUTH_MODE": "firebase",
+		"FIREBASE_PROJECT_ID": "p", "STORAGE_BUCKET": "p.firebasestorage.app",
+		"CORS_ORIGINS": "https://app.test", "PORT": "65535",
+	})
+	if _, err := Load(); err != nil {
+		t.Fatalf("valid prod config rejected: %v", err)
 	}
 }
