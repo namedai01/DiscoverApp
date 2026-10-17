@@ -9,6 +9,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
+
+	"github.com/namedai01/memopin/backend/internal/db"
 )
 
 const pgImage = "postgis/postgis:16-3.4"
@@ -21,7 +23,8 @@ var (
 )
 
 // NewPool returns a pool on a PostGIS container shared by every test in the
-// calling package (started on first use, stopped by RunMain). Needs Docker.
+// calling package (started and migrated on first use, stopped by RunMain).
+// Every call empties all app tables so each test starts clean. Needs Docker.
 func NewPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	once.Do(func() {
@@ -41,10 +44,18 @@ func NewPool(t *testing.T) *pgxpool.Pool {
 		if dsn, startErr = container.ConnectionString(ctx, "sslmode=disable"); startErr != nil {
 			return
 		}
-		pool, startErr = pgxpool.New(ctx, dsn)
+		if pool, startErr = pgxpool.New(ctx, dsn); startErr != nil {
+			return
+		}
+		startErr = db.Migrate(ctx, pool)
 	})
 	if startErr != nil {
 		t.Fatalf("start postgres container (is Docker running?): %v", startErr)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if _, err := pool.Exec(ctx, "TRUNCATE users, locations, stories, follows, devices RESTART IDENTITY CASCADE"); err != nil {
+		t.Fatalf("truncate tables: %v", err)
 	}
 	return pool
 }

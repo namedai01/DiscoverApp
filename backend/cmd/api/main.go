@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/namedai01/memopin/backend/internal/config"
+	"github.com/namedai01/memopin/backend/internal/db"
 	"github.com/namedai01/memopin/backend/internal/server"
 )
 
@@ -44,6 +45,10 @@ func run() error {
 		return err
 	}
 	defer pool.Close()
+
+	if err := db.Migrate(ctx, pool); err != nil {
+		return err
+	}
 
 	srv := &http.Server{
 		Addr:              net.JoinHostPort("", cfg.Port),

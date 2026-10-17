@@ -1,0 +1,23 @@
+version: "2"
+sql:
+  - engine: postgresql
+    schema: internal/db/migrations
+    queries: internal/db/queries
+    gen:
+      go:
+        package: store
+        out: internal/db/store
+        sql_package: pgx/v5
+        emit_json_tags: false
+        overrides:
+          - db_type: uuid
+            go_type: github.com/google/uuid.UUID
+          - db_type: timestamptz
+            go_type: time.Time
+          # Queries must not select geog raw: use ST_Y/ST_X(geog::geometry) as
+          # floats. The string mapping only lets sqlc generate the model structs.
+          - db_type: geography
+            go_type: string
+          - db_type: geography
+            nullable: true
+            go_type: string
