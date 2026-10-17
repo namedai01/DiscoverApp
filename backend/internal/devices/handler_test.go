@@ -140,3 +140,18 @@ func TestDeleteDevice_OnlyOwn(t *testing.T) {
 		t.Fatalf("anonymous delete: status = %d, want 401", w.Code)
 	}
 }
+
+func TestDeleteDevice_PercentEncodedToken(t *testing.T) {
+	h, pool := newHandler(t)
+	// Real FCM tokens look like "<id>:APA91b...", and clients percent-encode
+	// the colon when they put the token in the path.
+	if w := testutil.Do(t, h, "POST", "/v1/me/devices", "u1", map[string]string{"token": "ab:cd", "platform": "android"}); w.Code != http.StatusNoContent {
+		t.Fatalf("register: %d", w.Code)
+	}
+	if w := testutil.Do(t, h, "DELETE", "/v1/me/devices/ab%3Acd", "u1", nil); w.Code != http.StatusNoContent {
+		t.Fatalf("delete: status = %d", w.Code)
+	}
+	if got := owner(t, pool, "ab:cd"); got != "" {
+		t.Fatalf("row owner = %q after encoded delete, want gone", got)
+	}
+}

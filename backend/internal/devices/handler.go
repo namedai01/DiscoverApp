@@ -3,6 +3,7 @@ package devices
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/go-chi/chi/v5"
 
@@ -69,8 +70,15 @@ func (h *Handler) Unregister(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, httpx.Unauthorized("missing identity"))
 		return
 	}
+	// chi hands back the raw path segment when the request carries a RawPath
+	// (clients percent-encode the ":" in FCM tokens), so decode it here.
+	token, err := url.PathUnescape(chi.URLParam(r, "token"))
+	if err != nil || token == "" {
+		httpx.Error(w, httpx.BadRequest("invalid token in path"))
+		return
+	}
 	if err := h.Q.DeleteDevice(r.Context(), store.DeleteDeviceParams{
-		Token: chi.URLParam(r, "token"), UserID: caller.UID,
+		Token: token, UserID: caller.UID,
 	}); err != nil {
 		httpx.Error(w, err)
 		return
