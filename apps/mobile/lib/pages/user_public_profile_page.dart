@@ -42,16 +42,20 @@ class _UserPublicProfilePageState extends State<UserPublicProfilePage> {
         _user = fresh;
         _timelineKey = UniqueKey();
       });
-    } on ApiException catch (e) {
+    } catch (e) {
       if (!mounted) return;
       _showError(e, retry: _load);
     }
   }
 
-  void _showError(ApiException e, {VoidCallback? retry}) {
+  void _showError(Object e, {VoidCallback? retry}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(e.userMessage),
+        content: Text(
+          e is ApiException
+              ? e.userMessage
+              : 'Something went wrong. Please try again.',
+        ),
         action: retry == null
             ? null
             : SnackBarAction(label: 'Retry', onPressed: retry),
@@ -75,7 +79,7 @@ class _UserPublicProfilePageState extends State<UserPublicProfilePage> {
         _user = fresh;
         _timelineKey = UniqueKey();
       });
-    } on ApiException catch (e) {
+    } catch (e) {
       if (mounted) _showError(e);
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -117,7 +121,7 @@ class _UserPublicProfilePageState extends State<UserPublicProfilePage> {
                     height: 150,
                     width: 150,
                     child: Hero(
-                      tag: 'HeroTag ${_user.displayName}',
+                      tag: 'HeroTag ${_user.id}',
                       child: Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,

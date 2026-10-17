@@ -219,4 +219,48 @@ void main() {
     expect(e.code, 'unauthorized');
     expect(requests, 0);
   });
+
+  test('token provider throwing becomes network, sends nothing', () async {
+    var requests = 0;
+    final api = ApiClient(
+      baseUrl: 'http://h:8080',
+      idToken: ({bool forceRefresh = false}) async =>
+          throw StateError('network-request-failed'),
+      client: MockClient((req) async {
+        requests++;
+        return json(200, '{}');
+      }),
+    );
+    final e = await catchApi(() => api.send('GET', '/v1/me', auth: true));
+    expect(e.code, 'network');
+    expect(e.status, 0);
+    expect(requests, 0);
+  });
+
+  test('forced refresh throwing after a 401 becomes network', () async {
+    var requests = 0;
+    final api = ApiClient(
+      baseUrl: 'http://h:8080',
+      idToken: ({bool forceRefresh = false}) async =>
+          forceRefresh ? throw StateError('user-disabled') : 't1',
+      client: MockClient((req) async {
+        requests++;
+        return json(401, '{"error":{"code":"unauthorized","message":"x"}}');
+      }),
+    );
+    final e = await catchApi(() => api.send('GET', '/v1/me', auth: true));
+    expect(e.code, 'network');
+    expect(requests, 1);
+  });
+
+  test('malformed base url becomes network, sends nothing', () async {
+    var requests = 0;
+    final api = clientFor(baseUrl: 'http://[bad', (req) async {
+      requests++;
+      return json(200, '{}');
+    });
+    final e = await catchApi(() => api.send('GET', '/v1/places'));
+    expect(e.code, 'network');
+    expect(requests, 0);
+  });
 }

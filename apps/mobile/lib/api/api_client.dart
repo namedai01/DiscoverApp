@@ -12,7 +12,7 @@ typedef IdTokenProvider = Future<String?> Function({bool forceRefresh});
 ///
 /// Codes come from the backend (`bad_request`, `unauthorized`, `forbidden`,
 /// `not_found`, `conflict`, `unprocessable`, `internal`) or are added by the
-/// client: `network` (socket error or timeout), `bad_response` (2xx with an
+/// client: `network` (socket error, timeout, token lookup failure or an unusable URL), `bad_response` (2xx with an
 /// unparseable body) and `http_error` (non-2xx without a JSON error body).
 class ApiException implements Exception {
   const ApiException(this.status, this.code, this.message);
@@ -68,16 +68,27 @@ class ApiClient {
   }) async {
     if (!auth) return _once(method, path, query, body, null);
 
-    final token = await _idToken(forceRefresh: false);
+    final token = await _token(forceRefresh: false);
     if (token == null) throw _signedOut;
     try {
       return await _once(method, path, query, body, token);
     } on ApiException catch (e) {
       if (e.status != 401) rethrow;
     }
-    final fresh = await _idToken(forceRefresh: true);
+    final fresh = await _token(forceRefresh: true);
     if (fresh == null) throw _signedOut;
     return _once(method, path, query, body, fresh);
+  }
+
+  /// Asks the provider for a token. A provider that throws (Firebase offline
+  /// with an expired cached token, a disabled user) is reported as `network`
+  /// so callers only ever see [ApiException].
+  Future<String?> _token({required bool forceRefresh}) async {
+    try {
+      return await _idToken(forceRefresh: forceRefresh);
+    } catch (e) {
+      throw ApiException(0, 'network', 'Could not get a sign-in token: $e');
+    }
   }
 
   static const _signedOut = ApiException(
@@ -93,9 +104,14 @@ class ApiClient {
     Object? body,
     String? token,
   ) async {
-    var uri = Uri.parse('$_baseUrl$path');
-    if (query != null && query.isNotEmpty) {
-      uri = uri.replace(queryParameters: query);
+    final Uri uri;
+    try {
+      final parsed = Uri.parse('$_baseUrl$path');
+      uri = query != null && query.isNotEmpty
+          ? parsed.replace(queryParameters: query)
+          : parsed;
+    } on FormatException catch (e) {
+      throw ApiException(0, 'network', 'Invalid request URL: ${e.message}');
     }
     final request = http.Request(method, uri)
       ..headers['accept'] = 'application/json';
