@@ -32,31 +32,31 @@ type registerRequest struct {
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	caller, ok := auth.FromContext(r.Context())
 	if !ok {
-		httpx.Error(w, httpx.Unauthorized("missing identity"))
+		httpx.Error(w, r, httpx.Unauthorized("missing identity"))
 		return
 	}
 	var req registerRequest
 	if err := httpx.Decode(r, &req); err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	switch {
 	case req.Token == "" || len(req.Token) > maxTokenLen:
-		httpx.Error(w, httpx.BadRequest("token must be 1 to 4096 characters"))
+		httpx.Error(w, r, httpx.BadRequest("token must be 1 to 4096 characters"))
 		return
 	case req.Platform != "android" && req.Platform != "ios" && req.Platform != "web":
-		httpx.Error(w, httpx.BadRequest("platform must be android, ios or web"))
+		httpx.Error(w, r, httpx.BadRequest("platform must be android, ios or web"))
 		return
 	}
 
 	if _, err := users.Ensure(r.Context(), h.Q, caller, h.DefaultPhotoURL); err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	if err := h.Q.UpsertDevice(r.Context(), store.UpsertDeviceParams{
 		Token: req.Token, UserID: caller.UID, Platform: req.Platform,
 	}); err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -67,20 +67,20 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Unregister(w http.ResponseWriter, r *http.Request) {
 	caller, ok := auth.FromContext(r.Context())
 	if !ok {
-		httpx.Error(w, httpx.Unauthorized("missing identity"))
+		httpx.Error(w, r, httpx.Unauthorized("missing identity"))
 		return
 	}
 	// chi hands back the raw path segment when the request carries a RawPath
 	// (clients percent-encode the ":" in FCM tokens), so decode it here.
 	token, err := url.PathUnescape(chi.URLParam(r, "token"))
 	if err != nil || token == "" {
-		httpx.Error(w, httpx.BadRequest("invalid token in path"))
+		httpx.Error(w, r, httpx.BadRequest("invalid token in path"))
 		return
 	}
 	if err := h.Q.DeleteDevice(r.Context(), store.DeleteDeviceParams{
 		Token: token, UserID: caller.UID,
 	}); err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

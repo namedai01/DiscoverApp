@@ -5,6 +5,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"runtime/debug"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -39,7 +40,7 @@ func NewRouter(d Deps) http.Handler {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(requestLogger)
-	r.Use(middleware.Recoverer)
+	r.Use(recoverer)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: d.Cfg.CORSOrigins,
 		AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -47,6 +48,17 @@ func NewRouter(d Deps) http.Handler {
 		MaxAge:         300,
 	}))
 	r.Use(middleware.Timeout(15 * time.Second))
+
+	// Unrouted requests answer with the standard error body, not chi's
+	// plain-text defaults.
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		httpx.Error(w, r, httpx.NotFound("route not found"))
+	})
+	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+		httpx.Error(w, r, &httpx.APIError{
+			Status: http.StatusMethodNotAllowed, Code: "bad_request", Message: "method not allowed",
+		})
+	})
 
 	r.Get("/healthz", healthz(d.Pool))
 
@@ -98,7 +110,35 @@ func healthz(pool *pgxpool.Pool) http.HandlerFunc {
 	}
 }
 
-// requestLogger logs one structured line per request.
+// recoverer turns a handler panic into the standard 500 body and logs it with
+// the stack and request id. http.ErrAbortHandler is re-panicked, as net/http
+// expects.
+func recoverer(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			rec := recover()
+			if rec == nil {
+				return
+			}
+			if rec == http.ErrAbortHandler {
+				panic(rec)
+			}
+			slog.Error("panic in handler",
+				"panic", rec,
+				"stack", string(debug.Stack()),
+				"request_id", middleware.GetReqID(r.Context()),
+			)
+			httpx.Error(w, r, &httpx.APIError{
+				Status: http.StatusInternalServerError, Code: "internal", Message: "internal server error",
+			})
+		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
+// requestLogger logs one structured line per request. It logs the matched
+// route pattern, never the raw path: paths carry secrets such as FCM tokens
+// (/v1/me/devices/{token}).
 func requestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -110,11 +150,21 @@ func requestLogger(next http.Handler) http.Handler {
 		}
 		slog.Info("request",
 			"method", r.Method,
-			"path", r.URL.Path,
+			"route", routePattern(r),
 			"status", status,
 			"bytes", ww.BytesWritten(),
 			"duration", time.Since(start),
 			"request_id", middleware.GetReqID(r.Context()),
 		)
 	})
+}
+
+// routePattern is the chi pattern the request matched, or "unmatched".
+func routePattern(r *http.Request) string {
+	if rctx := chi.RouteContext(r.Context()); rctx != nil {
+		if p := rctx.RoutePattern(); p != "" {
+			return p
+		}
+	}
+	return "unmatched"
 }

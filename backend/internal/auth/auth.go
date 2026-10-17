@@ -64,7 +64,7 @@ func middleware(v Verifier, required bool) func(http.Handler) http.Handler {
 			header := r.Header.Get("Authorization")
 			if header == "" {
 				if required {
-					httpx.Error(w, httpx.Unauthorized("missing bearer token"))
+					httpx.Error(w, r, httpx.Unauthorized("missing bearer token"))
 					return
 				}
 				next.ServeHTTP(w, r)
@@ -72,7 +72,7 @@ func middleware(v Verifier, required bool) func(http.Handler) http.Handler {
 			}
 			token, ok := bearerToken(header)
 			if !ok {
-				httpx.Error(w, httpx.Unauthorized("malformed Authorization header"))
+				httpx.Error(w, r, httpx.Unauthorized("malformed Authorization header"))
 				return
 			}
 			id, err := v.Verify(r.Context(), token)
@@ -81,12 +81,12 @@ func middleware(v Verifier, required bool) func(http.Handler) http.Handler {
 					slog.Info("auth: token rejected",
 						"err", err,
 						"request_id", chimw.GetReqID(r.Context()))
-					httpx.Error(w, httpx.Unauthorized("invalid or expired token"))
+					httpx.Error(w, r, httpx.Unauthorized("invalid or expired token"))
 				} else {
 					slog.Warn("auth: token verification failed",
 						"err", err,
 						"request_id", chimw.GetReqID(r.Context()))
-					httpx.Error(w, errVerifierUnavailable)
+					httpx.Error(w, r, errVerifierUnavailable)
 				}
 				return
 			}

@@ -1,12 +1,16 @@
 package httpx
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 func req(target string) *http.Request {
@@ -53,7 +57,7 @@ func TestPage_Clamp(t *testing.T) {
 
 func TestError_APIErrorBody(t *testing.T) {
 	w := httptest.NewRecorder()
-	Error(w, NotFound("no such thing"))
+	Error(w, req("/x"), NotFound("no such thing"))
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("status = %d", w.Code)
 	}
@@ -64,7 +68,7 @@ func TestError_APIErrorBody(t *testing.T) {
 
 func TestError_UnknownErrorHidden(t *testing.T) {
 	w := httptest.NewRecorder()
-	Error(w, errors.New("secret db detail"))
+	Error(w, req("/x"), errors.New("secret db detail"))
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d", w.Code)
 	}
@@ -129,8 +133,29 @@ func TestJSON_ContentTypeUTF8(t *testing.T) {
 		t.Fatalf("success Content-Type = %q, want %q", got, want)
 	}
 	w = httptest.NewRecorder()
-	Error(w, NotFound("gone"))
+	Error(w, req("/x"), NotFound("gone"))
 	if got := w.Header().Get("Content-Type"); got != want {
 		t.Fatalf("error Content-Type = %q, want %q", got, want)
+	}
+}
+
+func TestError_InternalLogsRequestID(t *testing.T) {
+	var logs bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	h := middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		Error(w, r, errors.New("db exploded"))
+	}))
+	r := req("/x")
+	r.Header.Set("X-Request-Id", "req-123")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if got := logs.String(); !strings.Contains(got, "db exploded") || !strings.Contains(got, "request_id=req-123") {
+		t.Fatalf("log = %s, want cause and request_id=req-123", got)
+	}
+	if strings.Contains(w.Body.String(), "db exploded") {
+		t.Fatalf("cause leaked: %s", w.Body)
 	}
 }

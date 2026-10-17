@@ -51,11 +51,11 @@ func Ensure(ctx context.Context, q *store.Queries, id auth.Identity, defaultPhot
 func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 	id, ok := auth.FromContext(r.Context())
 	if !ok {
-		httpx.Error(w, httpx.Unauthorized("missing identity"))
+		httpx.Error(w, r, httpx.Unauthorized("missing identity"))
 		return
 	}
 	if _, err := Ensure(r.Context(), h.Q, id, h.DefaultPhotoURL); err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	h.writeMe(w, r, id)
@@ -70,29 +70,29 @@ type patchMeRequest struct {
 func (h *Handler) PatchMe(w http.ResponseWriter, r *http.Request) {
 	id, ok := auth.FromContext(r.Context())
 	if !ok {
-		httpx.Error(w, httpx.Unauthorized("missing identity"))
+		httpx.Error(w, r, httpx.Unauthorized("missing identity"))
 		return
 	}
 	var req patchMeRequest
 	if err := httpx.Decode(r, &req); err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	if req.DisplayName != nil {
 		name := strings.TrimSpace(*req.DisplayName)
 		if n := utf8.RuneCountInString(name); n < 1 || n > maxDisplayNameRunes {
-			httpx.Error(w, httpx.BadRequest("displayName must be 1 to 50 characters"))
+			httpx.Error(w, r, httpx.BadRequest("displayName must be 1 to 50 characters"))
 			return
 		}
 		req.DisplayName = &name
 	}
 	if req.PhotoURL != nil && !ValidImageURL(h.Bucket, id.UID, *req.PhotoURL) {
-		httpx.Error(w, httpx.BadRequest("photoUrl must be an upload in your own storage folder"))
+		httpx.Error(w, r, httpx.BadRequest("photoUrl must be an upload in your own storage folder"))
 		return
 	}
 
 	if _, err := Ensure(r.Context(), h.Q, id, h.DefaultPhotoURL); err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	if _, err := h.Q.UpdateUser(r.Context(), store.UpdateUserParams{
@@ -100,7 +100,7 @@ func (h *Handler) PatchMe(w http.ResponseWriter, r *http.Request) {
 		DisplayName: req.DisplayName,
 		PhotoUrl:    req.PhotoURL,
 	}); err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	h.writeMe(w, r, id)
@@ -110,7 +110,7 @@ func (h *Handler) PatchMe(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) writeMe(w http.ResponseWriter, r *http.Request, id auth.Identity) {
 	row, err := h.Q.GetUserWithStats(r.Context(), store.GetUserWithStatsParams{ID: id.UID, ViewerID: id.UID})
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, UserJSON{

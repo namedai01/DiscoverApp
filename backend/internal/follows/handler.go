@@ -24,21 +24,21 @@ type Handler struct {
 func (h *Handler) target(w http.ResponseWriter, r *http.Request) (caller auth.Identity, target string, ok bool) {
 	caller, authed := auth.FromContext(r.Context())
 	if !authed {
-		httpx.Error(w, httpx.Unauthorized("missing identity"))
+		httpx.Error(w, r, httpx.Unauthorized("missing identity"))
 		return caller, "", false
 	}
 	target = chi.URLParam(r, "id")
 	if target == caller.UID {
-		httpx.Error(w, httpx.BadRequest("you cannot follow yourself"))
+		httpx.Error(w, r, httpx.BadRequest("you cannot follow yourself"))
 		return caller, "", false
 	}
 	exists, err := h.Q.UserExists(r.Context(), target)
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return caller, "", false
 	}
 	if !exists {
-		httpx.Error(w, httpx.NotFound("user not found"))
+		httpx.Error(w, r, httpx.NotFound("user not found"))
 		return caller, "", false
 	}
 	return caller, target, true
@@ -52,11 +52,11 @@ func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := users.Ensure(r.Context(), h.Q, caller, h.DefaultPhotoURL); err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	if err := h.Q.Follow(r.Context(), store.FollowParams{FollowerID: caller.UID, TargetID: target}); err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -70,7 +70,7 @@ func (h *Handler) Unfollow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.Q.Unfollow(r.Context(), store.UnfollowParams{FollowerID: caller.UID, TargetID: target}); err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

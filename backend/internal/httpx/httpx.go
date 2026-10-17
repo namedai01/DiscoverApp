@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 const maxBodyBytes = 1 << 20 // 1 MiB
@@ -60,11 +62,11 @@ type errorDetail struct {
 
 // Error writes err as the standard error body. An APIError keeps its status
 // and message; anything else becomes a 500 "internal" with the cause logged
-// and hidden from the client.
-func Error(w http.ResponseWriter, err error) {
+// (with the request id) and hidden from the client.
+func Error(w http.ResponseWriter, r *http.Request, err error) {
 	var apiErr *APIError
 	if !errors.As(err, &apiErr) {
-		slog.Error("internal error", "err", err)
+		slog.Error("internal error", "err", err, "request_id", middleware.GetReqID(r.Context()))
 		apiErr = &APIError{http.StatusInternalServerError, "internal", "internal server error"}
 	}
 	JSON(w, apiErr.Status, errorBody{errorDetail{apiErr.Code, apiErr.Message}})

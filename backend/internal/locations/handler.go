@@ -36,7 +36,7 @@ type LocationJSON struct {
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	limit, offset, err := httpx.Page(r)
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	var pattern *string
@@ -50,7 +50,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		Off: int32(offset),
 	})
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	items := make([]LocationJSON, len(rows))
@@ -68,16 +68,16 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		httpx.Error(w, httpx.NotFound("location not found"))
+		httpx.Error(w, r, httpx.NotFound("location not found"))
 		return
 	}
 	row, err := h.Q.GetLocation(r.Context(), id)
 	if errors.Is(err, pgx.ErrNoRows) {
-		httpx.Error(w, httpx.NotFound("location not found"))
+		httpx.Error(w, r, httpx.NotFound("location not found"))
 		return
 	}
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, LocationJSON{

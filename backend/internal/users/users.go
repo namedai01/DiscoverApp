@@ -19,7 +19,7 @@ import (
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	limit, offset, err := httpx.Page(r)
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	var pattern *string
@@ -33,7 +33,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		Off: int32(offset),
 	})
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	items := make([]UserJSON, len(rows))
@@ -52,7 +52,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id, ok := auth.FromContext(r.Context())
 	if !ok {
-		httpx.Error(w, httpx.Unauthorized("missing identity"))
+		httpx.Error(w, r, httpx.Unauthorized("missing identity"))
 		return
 	}
 	row, err := h.Q.GetUserWithStats(r.Context(), store.GetUserWithStatsParams{
@@ -60,11 +60,11 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		ViewerID: id.UID,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		httpx.Error(w, httpx.NotFound("user not found"))
+		httpx.Error(w, r, httpx.NotFound("user not found"))
 		return
 	}
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, UserJSON{

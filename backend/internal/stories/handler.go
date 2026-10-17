@@ -110,17 +110,17 @@ func (h *Handler) validate(req createRequest, uid string) (title string, err err
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	caller, ok := auth.FromContext(r.Context())
 	if !ok {
-		httpx.Error(w, httpx.Unauthorized("missing identity"))
+		httpx.Error(w, r, httpx.Unauthorized("missing identity"))
 		return
 	}
 	var req createRequest
 	if err := httpx.Decode(r, &req); err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	title, err := h.validate(req, caller.UID)
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 
@@ -129,15 +129,15 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	// behind (not even the caller's user row).
 	loc, err := h.Q.NearestLocation(ctx, store.NearestLocationParams{Lat: *req.Lat, Lng: *req.Lng})
 	if errors.Is(err, pgx.ErrNoRows) {
-		httpx.Error(w, httpx.Unprocessable("no locations exist yet to attach the story to"))
+		httpx.Error(w, r, httpx.Unprocessable("no locations exist yet to attach the story to"))
 		return
 	}
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	if _, err := users.Ensure(ctx, h.Q, caller, h.DefaultPhotoURL); err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	row, err := h.Q.CreateStory(ctx, store.CreateStoryParams{
@@ -145,7 +145,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Description: req.Description, ImageUrl: req.ImageURL,
 	})
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 
@@ -177,26 +177,26 @@ func (h *Handler) notify(ctx context.Context, id uuid.UUID) {
 func (h *Handler) ListByLocation(w http.ResponseWriter, r *http.Request) {
 	locID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		httpx.Error(w, httpx.NotFound("location not found"))
+		httpx.Error(w, r, httpx.NotFound("location not found"))
 		return
 	}
 	if _, err := h.Q.GetLocation(r.Context(), locID); errors.Is(err, pgx.ErrNoRows) {
-		httpx.Error(w, httpx.NotFound("location not found"))
+		httpx.Error(w, r, httpx.NotFound("location not found"))
 		return
 	} else if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	limit, cursorTime, cursorID, err := pageParams(r)
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	rows, err := h.Q.ListStoriesByLocation(r.Context(), store.ListStoriesByLocationParams{
 		LocationID: locID, CursorTime: cursorTime, CursorID: cursorID, Lim: int32(limit + 1),
 	})
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	writePage(w, rows, limit)
@@ -207,40 +207,40 @@ func (h *Handler) ListByLocation(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListByOwner(w http.ResponseWriter, r *http.Request) {
 	caller, ok := auth.FromContext(r.Context())
 	if !ok {
-		httpx.Error(w, httpx.Unauthorized("missing identity"))
+		httpx.Error(w, r, httpx.Unauthorized("missing identity"))
 		return
 	}
 	ownerID := chi.URLParam(r, "id")
 	exists, err := h.Q.UserExists(r.Context(), ownerID)
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	if !exists {
-		httpx.Error(w, httpx.NotFound("user not found"))
+		httpx.Error(w, r, httpx.NotFound("user not found"))
 		return
 	}
 	if caller.UID != ownerID {
 		following, err := h.Q.IsFollowing(r.Context(), store.IsFollowingParams{FollowerID: caller.UID, TargetID: ownerID})
 		if err != nil {
-			httpx.Error(w, err)
+			httpx.Error(w, r, err)
 			return
 		}
 		if !following {
-			httpx.Error(w, httpx.Forbidden("follow this user to see their stories"))
+			httpx.Error(w, r, httpx.Forbidden("follow this user to see their stories"))
 			return
 		}
 	}
 	limit, cursorTime, cursorID, err := pageParams(r)
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	rows, err := h.Q.ListStoriesByOwner(r.Context(), store.ListStoriesByOwnerParams{
 		OwnerID: ownerID, CursorTime: cursorTime, CursorID: cursorID, Lim: int32(limit + 1),
 	})
 	if err != nil {
-		httpx.Error(w, err)
+		httpx.Error(w, r, err)
 		return
 	}
 	items := make([]storyRow, len(rows))
