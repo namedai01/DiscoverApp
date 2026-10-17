@@ -5,3 +5,5 @@ allowBuilds:
   protobufjs: false
   sharp: true
   unrs-resolver: false
+overrides:
+  '@grpc/grpc-js': 1.13.6

@@ -21,9 +21,9 @@ export function NavBar() {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-[1000] border-t border-neutral-200 bg-white md:top-0 md:bottom-auto md:border-t-0 md:border-b"
+      className="fixed inset-x-0 bottom-0 z-[1000] border-t border-neutral-200 bg-white md:top-0 md:bottom-auto md:h-12 md:border-t-0 md:border-b"
     >
-      <ul className="mx-auto flex max-w-3xl items-stretch justify-around md:justify-start md:gap-2 md:px-4">
+      <ul className="mx-auto flex max-w-3xl items-stretch justify-around md:h-full md:items-center md:justify-start md:gap-2 md:px-4">
         {LINKS.map(({ href, label }) => {
           const active = isActive(pathname, href);
           return (
@@ -31,7 +31,7 @@ export function NavBar() {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`block px-3 py-3 text-center text-sm font-medium md:my-2 md:rounded-full md:py-1.5 ${
+                className={`block px-3 py-3 text-center text-sm font-medium md:rounded-full md:py-1.5 ${
                   active
                     ? "bg-accent text-neutral-900"
                     : "text-neutral-600 hover:text-neutral-900"
