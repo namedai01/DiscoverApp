@@ -59,7 +59,7 @@ NEXT_PUBLIC_AUTH_MODE=firebase pnpm build
 pnpm e2e         # Playwright smoke
 ```
 
-`pnpm e2e` needs the backend running with `AUTH_MODE=fake` and seeded places. It starts `pnpm dev` itself (or reuses a server on :3000) with fake auth, and needs Chromium once: `pnpm exec playwright install chromium`.
+`pnpm e2e` needs the backend running with `AUTH_MODE=fake` and seeded places. It starts `pnpm dev` itself with fake auth and `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` set (or reuses a server on :3000, which must already be running in fake mode with `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` set, as `.env.example` does), and needs Chromium once: `pnpm exec playwright install chromium`.
 
 ## What a deploy needs
 
