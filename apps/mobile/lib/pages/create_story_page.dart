@@ -76,10 +76,11 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
     setState(() {});
     try {
       final story = await posting;
+      if (!mounted) return;
       _title.clear();
       _type.clear();
       _desc.clear();
-      if (mounted) setState(() => selectedImage = null);
+      setState(() => selectedImage = null);
       showMessage('Posted at ${story.venueName}');
     } on StoryValidationException catch (e) {
       showMessage(e.message);
@@ -93,19 +94,26 @@ class _CreateStoryPageState extends State<CreateStoryPage> {
   }
 
   /// Current device position, or null when location permission is denied.
+  /// Throws [LocationUnavailableException] when location services are off.
   Future<({double lat, double lng})?> _currentPosition() async {
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return null;
+      }
+      final p = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      return (lat: p.latitude, lng: p.longitude);
+    } on LocationServiceDisabledException {
+      throw const LocationUnavailableException();
     }
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      return null;
-    }
-    final p = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-    );
-    return (lat: p.latitude, lng: p.longitude);
   }
 
   @override

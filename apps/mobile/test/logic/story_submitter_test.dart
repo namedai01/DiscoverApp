@@ -26,6 +26,7 @@ void main() {
   late List<http.Request> requests;
   late Completer<void>? gate;
   var hasPosition = true;
+  var locationOff = false;
   var status = 201;
 
   StorySubmitter make() => StorySubmitter(
@@ -43,7 +44,10 @@ void main() {
       if (gate != null) await gate!.future;
       return 'https://x/uploaded.jpg';
     },
-    position: () async => hasPosition ? (lat: 21.0, lng: 105.8) : null,
+    position: () async {
+      if (locationOff) throw const LocationUnavailableException();
+      return hasPosition ? (lat: 21.0, lng: 105.8) : null;
+    },
   );
 
   setUp(() {
@@ -51,6 +55,7 @@ void main() {
     requests = [];
     gate = null;
     hasPosition = true;
+    locationOff = false;
     status = 201;
   });
 
@@ -97,6 +102,24 @@ void main() {
           (e) => e.message,
           'message',
           'Location permission is required to post a story',
+        ),
+      ),
+    );
+    expect(uploads, isEmpty);
+    expect(requests, isEmpty);
+    expect(s.busy, isFalse);
+  });
+
+  test('location services off rejected before upload', () async {
+    locationOff = true;
+    final s = make();
+    await expectLater(
+      s.submit(StoryDraft(image: image, title: 'Hello')),
+      throwsA(
+        isA<StoryValidationException>().having(
+          (e) => e.message,
+          'message',
+          'Turn on location services to post a story',
         ),
       ),
     );

@@ -27,6 +27,15 @@ class StoryValidationException implements Exception {
   String toString() => 'StoryValidationException($message)';
 }
 
+/// The position source could not read a position because location services
+/// are off or failed; the submitter turns this into a [StoryValidationException].
+class LocationUnavailableException implements Exception {
+  const LocationUnavailableException();
+
+  @override
+  String toString() => 'LocationUnavailableException';
+}
+
 /// Validates, uploads the photo, then posts the story, at most once at a time.
 ///
 /// Invalid input and a missing position are rejected before the upload, so no
@@ -68,7 +77,14 @@ class StorySubmitter {
         validateStoryDescription(draft.description);
     if (invalid != null) throw StoryValidationException(invalid);
 
-    final here = await _position();
+    final ({double lat, double lng})? here;
+    try {
+      here = await _position();
+    } on LocationUnavailableException {
+      throw const StoryValidationException(
+        'Turn on location services to post a story',
+      );
+    }
     if (here == null) {
       throw const StoryValidationException(
         'Location permission is required to post a story',
