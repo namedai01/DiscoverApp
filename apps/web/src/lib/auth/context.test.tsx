@@ -82,13 +82,34 @@ describe("AuthProvider", () => {
     await expect(latest.auth.signOut()).resolves.toBeUndefined();
   });
 
-  it("getToken never rejects, even when the refresh fails", async () => {
+  it("getToken resolves null when the client fails for a non-network reason", async () => {
     loadAuthClient.mockResolvedValue(
-      client({ getToken: vi.fn().mockRejectedValue(new Error("offline")) }),
+      client({
+        getToken: vi
+          .fn()
+          .mockRejectedValue({ code: "auth/user-token-expired" }),
+      }),
     );
     mount();
     await screen.findByText("signedIn");
     await expect(latest.auth.getToken(true)).resolves.toBeNull();
+  });
+
+  it("getToken rejects with a typed network error when Firebase is offline", async () => {
+    loadAuthClient.mockResolvedValue(
+      client({
+        getToken: vi
+          .fn()
+          .mockRejectedValue({ code: "auth/network-request-failed" }),
+      }),
+    );
+    mount();
+    await screen.findByText("signedIn");
+    await expect(latest.auth.getToken(true)).rejects.toMatchObject({
+      code: "network",
+      status: 0,
+      message: "Can't reach the server. Check your connection.",
+    });
   });
 
   it("refreshes the token once on a 401 and retries", async () => {
@@ -128,10 +149,10 @@ describe("AuthProvider", () => {
     );
   });
 
-  it("a failing refresh also signs out with the notice, as a typed error", async () => {
+  it("a refresh that fails for a non-network reason signs out with the notice", async () => {
     const c = client({
       getToken: vi.fn(async (force: boolean) => {
-        if (force) throw new Error("refresh failed");
+        if (force) throw { code: "auth/user-token-expired" };
         return "stale";
       }),
     });
@@ -143,11 +164,49 @@ describe("AuthProvider", () => {
     mount();
     await screen.findByText("signedIn");
 
-    await expect(latest.api.getMe()).rejects.toMatchObject({ code: "unauthorized" });
+    await expect(latest.api.getMe()).rejects.toMatchObject({
+      code: "unauthorized",
+    });
     expect(c.signOut).toHaveBeenCalledTimes(1);
     await waitFor(() =>
       expect(latest.auth.notice).toBe("Your session expired. Sign in again."),
     );
+  });
+
+  it("a refresh that fails because the network is down keeps the session", async () => {
+    const c = client({
+      getToken: vi.fn(async (force: boolean) => {
+        if (force) throw { code: "auth/network-request-failed" };
+        return "stale";
+      }),
+    });
+    loadAuthClient.mockResolvedValue(c);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json(401, { error: { code: "unauthorized", message: "x" } })),
+    );
+    mount();
+    await screen.findByText("signedIn");
+
+    await expect(latest.api.getMe()).rejects.toMatchObject({ code: "network" });
+    expect(c.signOut).not.toHaveBeenCalled();
+    expect(latest.auth.notice).toBeNull();
+  });
+
+  it("an offline first token lookup is a network error, not a sign-in prompt", async () => {
+    const c = client({
+      getToken: vi.fn().mockRejectedValue({ code: "auth/network-request-failed" }),
+    });
+    loadAuthClient.mockResolvedValue(c);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    mount();
+    await screen.findByText("signedIn");
+
+    await expect(latest.api.getMe()).rejects.toMatchObject({ code: "network" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(c.signOut).not.toHaveBeenCalled();
+    expect(latest.auth.notice).toBeNull();
   });
 
   it("clears the notice on the next sign-in", async () => {

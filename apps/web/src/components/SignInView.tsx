@@ -10,7 +10,7 @@ import { PhoneSignIn } from "./PhoneSignIn";
 // Null in production, so the fake form (and fake-client) never ships: the
 // NODE_ENV test is replaced at build time and the import is dropped.
 const FakeSignIn =
-  process.env.NODE_ENV !== "production"
+  process.env.NODE_ENV !== "production" && publicEnv.authMode === "fake"
     ? dynamic(() => import("./FakeSignIn").then((m) => m.FakeSignIn))
     : null;
 

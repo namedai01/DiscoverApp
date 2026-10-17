@@ -11,9 +11,12 @@ import {
 } from "react";
 import { createApi } from "@/lib/api/client";
 import { ApiProvider } from "@/lib/api/context";
+import { ApiError } from "@/lib/api/errors";
 import { publicEnv } from "@/lib/env";
 import { loadAuthClient } from "./index";
 import type { AuthUser, FakeAuthClient, FirebaseAuthClient } from "./types";
+
+const NETWORK_FAILED = "auth/network-request-failed";
 
 export const SESSION_EXPIRED_NOTICE = "Your session expired. Sign in again.";
 
@@ -76,13 +79,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [ensureClient]);
 
-  // Never rejects: any failure reads as "no token", which the API client
-  // turns into a typed 401 (and, after a forced refresh, a sign-out).
+  // Rejects only with a typed network ApiError, when Firebase cannot reach its
+  // servers: the session is intact, so the API call fails as "offline" instead
+  // of prompting sign-in or signing out. Any other failure reads as "no
+  // token", which the API client turns into a typed 401 (and, after a forced
+  // refresh, a sign-out).
   const getToken = useCallback(
     async (force: boolean): Promise<string | null> => {
       try {
         return await (await ensureClient()).getToken(force);
-      } catch {
+      } catch (e) {
+        if ((e as { code?: unknown } | null)?.code === NETWORK_FAILED) {
+          throw new ApiError(
+            0,
+            "network",
+            "Can't reach the server. Check your connection.",
+          );
+        }
         return null;
       }
     },

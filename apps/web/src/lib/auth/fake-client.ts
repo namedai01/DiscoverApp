@@ -26,8 +26,22 @@ function write(storage: Storage, uid: string | null) {
   }
 }
 
+// Reading window.localStorage itself can throw (blocked site data).
+function defaultStorage(): Storage {
+  try {
+    return window.localStorage;
+  } catch {
+    const memory = new Map<string, string>();
+    return {
+      getItem: (k) => memory.get(k) ?? null,
+      setItem: (k, v) => void memory.set(k, v),
+      removeItem: (k) => void memory.delete(k),
+    } as Storage;
+  }
+}
+
 export function createFakeAuthClient(
-  storage: Storage = window.localStorage,
+  storage: Storage = defaultStorage(),
 ): FakeAuthClient {
   const listeners = new Set<(u: AuthUser | null) => void>();
   let uid = read(storage);

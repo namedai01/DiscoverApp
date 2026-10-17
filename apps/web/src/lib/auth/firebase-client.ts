@@ -12,11 +12,17 @@ import type { FirebaseAuthClient } from "./types";
 export function createFirebaseAuthClient(): FirebaseAuthClient {
   const auth = getAuth(getFirebaseApp());
   let verifier: RecaptchaVerifier | null = null;
+  let verifierHost: HTMLElement | null = null;
   let confirmation: ConfirmationResult | null = null;
 
+  // An invisible verifier's clear() leaves its element behind, and Firebase
+  // refuses to render twice into one element. So every verifier gets a fresh
+  // child, and the container is emptied when the verifier is dropped.
   const clearVerifier = () => {
     verifier?.clear();
     verifier = null;
+    verifierHost?.replaceChildren();
+    verifierHost = null;
   };
 
   return {
@@ -32,10 +38,11 @@ export function createFirebaseAuthClient(): FirebaseAuthClient {
         // Created per send, not on mount, so a failed attempt starts clean.
         clearVerifier();
         confirmation = null;
-        verifier = new RecaptchaVerifier(auth, recaptchaContainer, {
-          size: "invisible",
-        });
+        const el = document.createElement("div");
+        recaptchaContainer.replaceChildren(el);
+        verifierHost = recaptchaContainer;
         try {
+          verifier = new RecaptchaVerifier(auth, el, { size: "invisible" });
           confirmation = await signInWithPhoneNumber(
             auth,
             phoneE164,

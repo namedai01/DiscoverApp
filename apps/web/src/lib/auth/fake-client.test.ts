@@ -70,4 +70,19 @@ describe("createFakeAuthClient", () => {
     client.signIn("u1");
     expect(seen).not.toHaveBeenCalled();
   });
+
+  it("falls back to memory when window.localStorage is blocked", async () => {
+    const spy = vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+      throw new DOMException("blocked", "SecurityError");
+    });
+    try {
+      const client = createFakeAuthClient();
+      client.signIn("u1");
+      await expect(client.getToken(false)).resolves.toBe("fake:u1:");
+      await client.signOut();
+      await expect(client.getToken(false)).resolves.toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
