@@ -1,41 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../api/models.dart';
+import '../components/net_image.dart';
 
 class DetailsCover extends StatelessWidget {
-  //Variables to recieve datas from MainCard (as per index)
-  final String imagePath;
-  final String venueName;
-  final String venueLocation;
-  final int numberStories;
+  final Location location;
 
-  //Recieving Datas
-  DetailsCover({
-    super.key,
-    required this.imagePath,
-    required this.venueName,
-    required this.venueLocation,
-    required this.numberStories,
-  });
-
-  final FirebaseFirestore locationsFSI = FirebaseFirestore.instance;
+  const DetailsCover({super.key, required this.location});
 
   @override
   Widget build(BuildContext context) {
+    final image = imageOrNull(location.imageUrl);
     return Hero(
-      tag: venueName + 'MainCard',
+      tag: 'MainCard ${location.id}',
       child: Container(
         height: MediaQuery.of(context).size.height,
         padding: EdgeInsets.symmetric(horizontal: 35),
         decoration: BoxDecoration(
           color: Colors.grey[300],
-          image: DecorationImage(
-            image: NetworkImage(imagePath),
-            fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(
-              Colors.black.withValues(alpha: 0.2),
-              BlendMode.multiply,
-            ),
-          ),
+          image: image == null
+              ? null
+              : DecorationImage(
+                  image: image,
+                  fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(
+                    Colors.black.withValues(alpha: 0.2),
+                    BlendMode.multiply,
+                  ),
+                ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,7 +37,7 @@ class DetailsCover extends StatelessWidget {
               //Venue Name
               color: Colors.transparent,
               child: Text(
-                venueName,
+                location.venueName,
                 textAlign: TextAlign.left,
                 style: TextStyle(
                   color: Colors.white,
@@ -59,7 +51,7 @@ class DetailsCover extends StatelessWidget {
               //Venue Location + some other details.
               color: Colors.transparent,
               child: Text(
-                venueLocation + '  .  ' + numberStories.toString() + ' Stories',
+                '${location.venueLocation}  .  ${location.storyCount} Stories',
                 textAlign: TextAlign.left,
                 style: TextStyle(
                   fontFamily: 'OpenSans',

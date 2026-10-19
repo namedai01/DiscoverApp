@@ -1,23 +1,45 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../components/list_card.dart';
+import '../logic/story_pager.dart';
 import '../pages/story_page.dart';
+import '../services/services.dart';
 
-class DetailsInfo extends StatelessWidget {
+//This Page shows Stories of a specific Location from the API.
+class DetailsInfo extends StatefulWidget {
   final String description;
   final String locationID;
 
-  DetailsInfo({super.key, required this.description, required this.locationID});
+  const DetailsInfo({
+    super.key,
+    required this.description,
+    required this.locationID,
+  });
 
-  final FirebaseFirestore locationsFSI = FirebaseFirestore.instance;
+  @override
+  State<DetailsInfo> createState() => _DetailsInfoState();
+}
 
-  //This Page shows Stiories of a specific Location from FireStore.
+class _DetailsInfoState extends State<DetailsInfo> {
+  late final StoryPager _pager;
+
+  @override
+  void initState() {
+    super.initState();
+    _pager = StoryPager((cursor) {
+      return api.locationStories(widget.locationID, cursor: cursor);
+    });
+    _pager.refresh();
+  }
+
+  @override
+  void dispose() {
+    _pager.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    double topSpace = 30;
-    double bottomSpace = 20;
-
     return Column(
       children: <Widget>[
         SizedBox(height: 100),
@@ -25,184 +47,94 @@ class DetailsInfo extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 35),
           height: MediaQuery.of(context).size.height - 100,
           constraints: BoxConstraints(minHeight: 160),
-          child: StreamBuilder(
-            stream: locationsFSI
-                .collection('stories')
-                .orderBy('storyTime', descending: true)
-                .where('locationId', isEqualTo: locationID)
-                .snapshots(),
-            builder: (BuildContext context, AsyncSnapshot snapshot) {
-              List data = [null];
-              if (snapshot.hasData) {
-                data = snapshot.data.docs;
-                if (snapshot.data.docs.length == 0) {
-                  data = [null];
-                }
-              }
-              return ListView.builder(
-                physics: BouncingScrollPhysics(),
-                padding: EdgeInsets.all(0),
-                itemCount: data.length,
-                itemBuilder: (BuildContext context, int index) {
-                  if (index == 0) {
-                    topSpace = 30;
-                    bottomSpace = 20;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          //Description of the venue, fetched from json.
-                          description,
-                          textAlign: TextAlign.left,
-                          maxLines: 7,
-                          style: TextStyle(
-                            fontSize: 17,
-                            height: 1.2,
-                            fontStyle: FontStyle.normal,
-                          ),
-                        ),
-                        SizedBox(height: 40),
-                        Text(
-                          //Title of Stories.
-                          'LOCAL STORIES',
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                            color: Color(0xff7c7c7c),
-                            fontFamily: 'OpenSans',
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: topSpace),
-                        data[index] == null
-                            ? Center(child: Text('No stories'))
-                            : InkWell(
-                                onTap: () {
-                                  print('clicked');
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (BuildContext context) =>
-                                          StoryPage(
-                                            storyImage: snapshot
-                                                .data
-                                                .docs[index]['storyImage'],
-                                            storyTitle: snapshot
-                                                .data
-                                                .docs[index]['storyTitle'],
-                                            storyTime: snapshot
-                                                .data
-                                                .docs[index]['storyTime'],
-                                            storyType: snapshot
-                                                .data
-                                                .docs[index]['storyType'],
-                                            storyDescription: snapshot
-                                                .data
-                                                .docs[index]['storyDescription'],
-                                          ),
-                                    ),
-                                  );
-                                },
-                                child: ListCard(
-                                  storyImage:
-                                      snapshot.data.docs[index]['storyImage'],
-                                  storyTitle:
-                                      snapshot.data.docs[index]['storyTitle'],
-                                  storyTime:
-                                      snapshot.data.docs[index]['storyTime'],
-                                  storyType:
-                                      snapshot.data.docs[index]['storyType'],
-                                  locationID: locationID,
-                                ),
-                              ),
-                        SizedBox(height: bottomSpace),
-                        Container(color: Color(0xffeeeeee), height: 1),
-                      ],
-                    );
-                  }
-                  if (index == snapshot.data.docs.length - 1) {
-                    topSpace = 20;
-                    bottomSpace = 20;
-                    return Column(
-                      children: <Widget>[
-                        SizedBox(height: topSpace),
-                        InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (BuildContext context) => StoryPage(
-                                  storyImage:
-                                      snapshot.data.docs[index]['storyImage'],
-                                  storyTitle:
-                                      snapshot.data.docs[index]['storyTitle'],
-                                  storyTime:
-                                      snapshot.data.docs[index]['storyTime'],
-                                  storyType:
-                                      snapshot.data.docs[index]['storyType'],
-                                  storyDescription: snapshot
-                                      .data
-                                      .docs[index]['storyDescription'],
-                                ),
-                              ),
-                            );
-                          },
-                          child: ListCard(
-                            storyImage: snapshot.data.docs[index]['storyImage'],
-                            storyTitle: snapshot.data.docs[index]['storyTitle'],
-                            storyTime: snapshot.data.docs[index]['storyTime'],
-                            storyType: snapshot.data.docs[index]['storyType'],
-                            locationID: locationID,
-                          ),
-                        ),
-                        SizedBox(height: bottomSpace),
-                      ],
-                    );
-                  } else {
-                    topSpace = 20;
-                    bottomSpace = 20;
-                    return Column(
-                      children: <Widget>[
-                        SizedBox(height: topSpace),
-                        InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (BuildContext context) => StoryPage(
-                                  storyImage:
-                                      snapshot.data.docs[index]['storyImage'],
-                                  storyTitle:
-                                      snapshot.data.docs[index]['storyTitle'],
-                                  storyTime:
-                                      snapshot.data.docs[index]['storyTime'],
-                                  storyType:
-                                      snapshot.data.docs[index]['storyType'],
-                                  storyDescription: snapshot
-                                      .data
-                                      .docs[index]['storyDescription'],
-                                ),
-                              ),
-                            );
-                          },
-                          child: ListCard(
-                            storyImage: snapshot.data.docs[index]['storyImage'],
-                            storyTitle: snapshot.data.docs[index]['storyTitle'],
-                            storyTime: snapshot.data.docs[index]['storyTime'],
-                            storyType: snapshot.data.docs[index]['storyType'],
-                            locationID: locationID,
-                          ),
-                        ),
-                        SizedBox(height: bottomSpace),
-                        Container(color: Color(0xffeeeeee), height: 1),
-                      ],
-                    );
-                  }
-                },
+          child: ListenableBuilder(
+            listenable: _pager,
+            builder: (BuildContext context, Widget? _) {
+              final stories = _pager.items;
+              return RefreshIndicator(
+                onRefresh: _pager.refresh,
+                child: ListView(
+                  physics: AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: EdgeInsets.all(0),
+                  children: <Widget>[
+                    Text(
+                      //Description of the venue, fetched from json.
+                      widget.description,
+                      textAlign: TextAlign.left,
+                      maxLines: 7,
+                      style: TextStyle(
+                        fontSize: 17,
+                        height: 1.2,
+                        fontStyle: FontStyle.normal,
+                      ),
+                    ),
+                    SizedBox(height: 40),
+                    Text(
+                      //Title of Stories.
+                      'LOCAL STORIES',
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
+                        color: Color(0xff7c7c7c),
+                        fontFamily: 'OpenSans',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 30),
+                    for (final story in stories) ...[
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (BuildContext context) =>
+                                  StoryPage(story: story),
+                            ),
+                          );
+                        },
+                        child: ListCard(story: story),
+                      ),
+                      SizedBox(height: 20),
+                      Container(color: Color(0xffeeeeee), height: 1),
+                      SizedBox(height: 20),
+                    ],
+                    _footer(stories.isEmpty),
+                    SizedBox(height: 20),
+                  ],
+                ),
               );
             },
           ),
         ),
       ],
     );
+  }
+
+  Widget _footer(bool empty) {
+    final error = _pager.error;
+    if (_pager.loading && empty) {
+      return Center(child: CircularProgressIndicator());
+    }
+    if (error != null) {
+      return Column(
+        children: <Widget>[
+          Text(error.userMessage, textAlign: TextAlign.center),
+          TextButton(
+            onPressed: _pager.hasMore ? _pager.loadMore : _pager.refresh,
+            child: Text('Retry'),
+          ),
+        ],
+      );
+    }
+    if (empty) return Center(child: Text('No stories'));
+    if (_pager.hasMore) {
+      return Center(
+        child: _pager.loading
+            ? CircularProgressIndicator()
+            : TextButton(onPressed: _pager.loadMore, child: Text('Load more')),
+      );
+    }
+    return SizedBox.shrink();
   }
 }

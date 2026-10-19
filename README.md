@@ -1,13 +1,71 @@
-# DISCOVERAPP
+# MEMOPIN
 
-Monorepo for Explore App.
+Monorepo for Memopin.
 
 ```
 apps/
-  mobile/        Flutter app (package `exploreapp`)
+  mobile/        Flutter app (package `memopin`)
+  web/           Next.js web client
+backend/         Go API (Postgres, Firebase Auth, FCM)
 ```
 
-Planned: `apps/web/` (web client), `backend/` (server). Add each as its own top-level project with its own README.
+## Features
+
+Memopin lets users browse places, post photo stories tied to a place, follow other users, and see places on a map. Data lives behind the Go API in `backend/` (Postgres); Firebase provides phone sign-in, photo storage and push (Auth, Storage, Cloud Messaging). The app has 5 tabs: Explore, People, Maps, Create Story, My Profile.
+
+### Explore places
+
+- Horizontal card list of all places, sorted by name. Each card shows cover photo, name, area and story count (refreshed on reload, not live).
+- Search by name prefix (case-insensitive).
+- Place details: full-screen cover, then description and "Local stories" (newest first).
+- Story view: photo, title, type, description, posted time.
+
+### People and following
+
+- User list sorted by follower count, with search by display name.
+- Public profile with Follow / Unfollow and follower count.
+- A user's story timeline is visible only after you follow them.
+- Viewing profiles requires sign-in.
+
+### Create story
+
+- Pick a photo from the gallery, enter title, type and description.
+- The story is attached automatically to the nearest place, based on current GPS location (location permission required).
+- Photo is uploaded to Firebase Storage; the story is then posted to the API.
+
+### Map
+
+- OpenStreetMap map (`flutter_map`) with one marker per place; tap a marker to open its details.
+- Pick a place from the dropdown to move the camera there, then "Direction" opens an external maps app for routing. There is no in-app routing.
+
+### Account and app
+
+- Phone number sign-in with SMS code. The API creates the profile on first sign-in (default display name `user <first 6 chars of uid>`).
+- My Profile: change display name and avatar, see follower count and own stories, sign out.
+- Push notification (FCM, sent by the backend) when someone you follow posts a new story; the app registers its device token after sign-in and removes it on sign-out. The Android app shows pushes that arrive in the foreground as a local notification.
+- Accent color theme (Yellow, Red, Blue, Green, Pink), saved on device.
+- "No internet" dialog when the connection drops.
+
+### Not yet supported
+
+Likes, comments, editing or deleting stories, in-app routing, live (realtime) updates, widget and integration tests.
+
+### Tests
+
+`cd apps/mobile && flutter test` runs unit tests for the API client, API calls and models, the cursor pager, input validators, the story submitter, Storage upload paths, push registration, map helpers, time/follower formatting and the network image widget. They need no Firebase project, device or network.
+
+## Backend
+
+Go HTTP API in `backend/`: places, stories, follows and FCM device tokens, backed by Postgres (PostGIS) and Firebase Auth.
+
+```bash
+cd backend
+cp .env.example .env
+make dev      # Postgres in Docker + API on :8080
+make test     # needs Docker
+```
+
+See `backend/README.md` for configuration, seed data, the API table and the Cloud Run deploy.
 
 ## Mobile app
 
@@ -19,3 +77,14 @@ flutter run
 ```
 
 Requires Flutter 3.47+ (Dart 3.13+). See `apps/mobile/README.md`.
+
+## Web app
+
+```bash
+cd apps/web
+cp .env.example .env.local
+pnpm install
+pnpm dev      # http://localhost:3000, expects the backend on :8080
+```
+
+Next.js client for browsing places, posting stories, following people and the map. For development, run the backend with `AUTH_MODE=fake` and use the fake sign-in. See `apps/web/README.md` for the environment variables, commands, `pnpm e2e` and what a deploy needs.

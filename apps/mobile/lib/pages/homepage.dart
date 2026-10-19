@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:exploreapp/pages/people_page.dart';
+import 'package:memopin/pages/people_page.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 

@@ -1,71 +1,47 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../api/models.dart';
 import '../pages/details_page.dart';
+import 'net_image.dart';
 
 //This are the stars of the App, the main Widgets displaying covers of Locations.
-class MainCard extends StatefulWidget {
-  //Variables for datas recieved from json.
-  final String imagePath;
-  final String venueName;
-  final String venueLocation;
-  final String description;
-  final String locationID;
+class MainCard extends StatelessWidget {
+  final Location location;
 
-  //Importing datas from json via explore_page.dart
-  MainCard({
-    super.key,
-    required this.imagePath,
-    required this.venueName,
-    required this.venueLocation,
-    required this.description,
-    required this.locationID,
-  });
-
-  @override
-  State<MainCard> createState() => _MainCardState();
-}
-
-class _MainCardState extends State<MainCard> {
-  final FirebaseFirestore locationsFSI = FirebaseFirestore.instance;
-
-  int numberStories = 0;
+  const MainCard({super.key, required this.location});
 
   @override
   Widget build(BuildContext context) {
+    final image = imageOrNull(location.imageUrl);
     return GestureDetector(
       onTap: () {
         // Creates Details Page for respective Data.
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (BuildContext context) => DetailsPage(
-              imagePath: widget.imagePath,
-              venueName: widget.venueName,
-              venueLocation: widget.venueLocation,
-              description: widget.description,
-              numberStories: numberStories,
-              locationID: widget.locationID,
-            ),
+            builder: (BuildContext context) =>
+                DetailsPage(location: location),
           ),
         );
       },
       child: Hero(
-        tag: widget.venueName + 'MainCard',
+        tag: 'MainCard ${location.id}',
         child: Container(
           width: MediaQuery.of(context).size.width - 60,
           padding: EdgeInsets.symmetric(horizontal: 35),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(5),
             color: Colors.grey[300],
-            image: DecorationImage(
-              image: NetworkImage(widget.imagePath),
-              fit: BoxFit.cover,
-              colorFilter: ColorFilter.mode(
-                Colors.black.withValues(alpha: 0.2),
-                BlendMode.multiply,
-              ),
-            ),
+            image: image == null
+                ? null
+                : DecorationImage(
+                    image: image,
+                    fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(
+                      Colors.black.withValues(alpha: 0.2),
+                      BlendMode.multiply,
+                    ),
+                  ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,7 +51,7 @@ class _MainCardState extends State<MainCard> {
                 //Venue Name
                 color: Colors.transparent,
                 child: Text(
-                  widget.venueName,
+                  location.venueName,
                   textAlign: TextAlign.left,
                   maxLines: 1,
                   style: TextStyle(
@@ -86,49 +62,19 @@ class _MainCardState extends State<MainCard> {
                 ),
               ),
               SizedBox(height: 5),
-              StreamBuilder(
-                stream: locationsFSI
-                    .collection('stories')
-                    .orderBy('storyTime', descending: true)
-                    .where('locationId', isEqualTo: widget.locationID)
-                    .snapshots(),
-                builder: (BuildContext context, AsyncSnapshot snapshot) {
-                  if (!snapshot.hasData) {
-                    return Material(
-                      //Venue Location + some other details (When no data in snapshot).
-                      color: Colors.transparent,
-                      child: Text(
-                        widget.venueLocation + '  .  0 Stories',
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                          fontFamily: 'OpenSans',
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: Colors.white,
-                        ),
-                      ),
-                    );
-                  } else {
-                    numberStories = snapshot.data.docs.length;
-                    return Material(
-                      //Venue Location + some other details.
-                      color: Colors.transparent,
-                      child: Text(
-                        widget.venueLocation +
-                            '  .  ' +
-                            snapshot.data.docs.length.toString() +
-                            ' Stories',
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                          fontFamily: 'OpenSans',
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: Colors.white,
-                        ),
-                      ),
-                    );
-                  }
-                },
+              Material(
+                //Venue Location + story count.
+                color: Colors.transparent,
+                child: Text(
+                  '${location.venueLocation}  .  ${location.storyCount} Stories',
+                  textAlign: TextAlign.left,
+                  style: TextStyle(
+                    fontFamily: 'OpenSans',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: Colors.white,
+                  ),
+                ),
               ),
               SizedBox(height: 30),
               Material(

@@ -1,45 +1,29 @@
-import 'package:exploreapp/pages/user_public_profile_page.dart';
-import 'package:exploreapp/utils.dart';
+import 'package:memopin/api/models.dart';
+import 'package:memopin/components/net_image.dart';
+import 'package:memopin/pages/user_public_profile_page.dart';
+import 'package:memopin/utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-class UserCard extends StatefulWidget {
-  final String uid;
-  final String displayName;
-  final String photoURL;
-  final int follower;
+class UserCard extends StatelessWidget {
+  final AppUser user;
 
-  const UserCard({
-    super.key,
-    required this.uid,
-    required this.displayName,
-    required this.photoURL,
-    required this.follower,
-  });
+  const UserCard({super.key, required this.user});
 
-  @override
-  State<UserCard> createState() => _UserCardState();
-}
-
-class _UserCardState extends State<UserCard> {
   @override
   Widget build(BuildContext context) {
+    final image = imageOrNull(user.photoUrl);
     return InkWell(
       onTap: () {
         if (FirebaseAuth.instance.currentUser == null) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text("Please Login :((((")));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text("Please Login :((((")));
         } else {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (BuildContext context) => UserPublicProfilePage(
-                uid: widget.uid,
-                displayName: widget.displayName,
-                photoURL: widget.photoURL,
-                follower: widget.follower,
-              ),
+              builder: (BuildContext context) =>
+                  UserPublicProfilePage(user: user),
             ),
           );
         }
@@ -47,15 +31,14 @@ class _UserCardState extends State<UserCard> {
       child: Row(
         children: <Widget>[
           Hero(
-            tag: 'HeroTag ' + widget.displayName,
+            tag: 'HeroTag ${user.id}',
             child: Container(
               height: 70,
               width: 70,
               decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(widget.photoURL),
-                  fit: BoxFit.cover,
-                ),
+                image: image == null
+                    ? null
+                    : DecorationImage(image: image, fit: BoxFit.cover),
                 borderRadius: BorderRadius.circular(5),
                 color: Colors.grey[300],
               ),
@@ -67,7 +50,7 @@ class _UserCardState extends State<UserCard> {
               Container(
                 width: MediaQuery.of(context).size.width - 160,
                 child: Text(
-                  widget.displayName,
+                  user.displayName,
                   maxLines: 1,
                   style: TextStyle(fontSize: 15),
                 ),
@@ -76,7 +59,7 @@ class _UserCardState extends State<UserCard> {
               Container(
                 width: MediaQuery.of(context).size.width - 160,
                 child: Text(
-                  formatFollower(widget.follower),
+                  formatFollower(user.followerCount),
                   textAlign: TextAlign.left,
                   style: TextStyle(
                     fontFamily: 'OpenSans',

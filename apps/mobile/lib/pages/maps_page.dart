@@ -1,11 +1,13 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../api/api_client.dart';
+import '../api/models.dart';
 import '../components/page_heading.dart';
-import '../const.dart';
+import '../config.dart';
 import '../logic/map_logic.dart';
+import '../services/services.dart';
 import 'details_page.dart';
 
 class MapsPage extends StatefulWidget {
@@ -16,11 +18,18 @@ class MapsPage extends StatefulWidget {
 }
 
 class _MapsPageState extends State<MapsPage> {
-  final FirebaseFirestore locationsFSI = FirebaseFirestore.instance;
   final MapController mapController = MapController();
+  late Future<List<Location>> _locations;
+  Object? _reportedError;
 
-  /// Doc id of the location chosen in the dropdown.
+  /// Id of the location chosen in the dropdown.
   String? displaySelectedLocation;
+
+  @override
+  void initState() {
+    super.initState();
+    _locations = api.allLocations();
+  }
 
   @override
   void dispose() {
@@ -29,7 +38,7 @@ class _MapsPageState extends State<MapsPage> {
   }
 
   /// This is the main Map Widget.
-  Widget theMap(List<DocumentSnapshot<Map<String, dynamic>>> locations) {
+  Widget theMap(List<Location> locations) {
     return Column(
       children: <Widget>[
         pageHeader('Map', 30),
@@ -55,18 +64,18 @@ class _MapsPageState extends State<MapsPage> {
                 : buildDDMenuItems(locations),
             decoration: const InputDecoration(border: InputBorder.none),
             onChanged: (String? id) {
-              final doc = locations.where((d) => d.id == id).firstOrNull;
-              if (doc == null) return;
+              final location = locations.where((l) => l.id == id).firstOrNull;
+              if (location == null) return;
               setState(() {
                 displaySelectedLocation = id;
               });
 
               /// Animates the Camera Position to desired Location.
               moveToLocation(
-                latLng: locationLatLng(doc),
+                latLng: locationLatLng(location),
                 mapController: mapController,
               );
-              showDirectionOptions(locationLatLng(doc));
+              showDirectionOptions(locationLatLng(location));
             },
             initialValue: displaySelectedLocation,
             isExpanded: true,
@@ -80,20 +89,20 @@ class _MapsPageState extends State<MapsPage> {
             borderRadius: BorderRadius.circular(5),
             child: FlutterMap(
               mapController: mapController,
-              options: const MapOptions(
-                initialCenter: LatLng(21.03, 105.78),
-                initialZoom: 5.0,
+              options: MapOptions(
+                initialCenter: AppConfig.mapInitialCenter,
+                initialZoom: AppConfig.mapInitialZoom,
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.exploreapp',
+                  urlTemplate: AppConfig.mapTileUrl,
+                  userAgentPackageName: 'com.memopin.app',
                 ),
                 MarkerLayer(
                   markers: buildMarkers(locations, _onLocationTapped),
                 ),
-                const SimpleAttributionWidget(
-                  source: Text('OpenStreetMap contributors'),
+                SimpleAttributionWidget(
+                  source: Text(AppConfig.mapAttribution),
                 ),
               ],
             ),
@@ -131,48 +140,39 @@ class _MapsPageState extends State<MapsPage> {
   }
 
   /// When location is tapped, it will navigate to the location detail page.
-  Future<void> _onLocationTapped(
-    DocumentSnapshot<Map<String, dynamic>> location,
-  ) async {
-    /// calc the number stories
-    final count = await locationsFSI
-        .collection(storiesCollectionPath)
-        .where('locationId', isEqualTo: location.id)
-        .count()
-        .get();
-    if (!mounted) return;
-
-    /// Navigate to the details page
+  void _onLocationTapped(Location location) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (BuildContext context) => DetailsPage(
-          imagePath: location['imagePath'],
-          venueName: location['venueName'],
-          venueLocation: location['venueLocation'],
-          description: location['description'],
-          numberStories: count.count ?? 0,
-          locationID: location.id,
-        ),
+        builder: (BuildContext context) => DetailsPage(location: location),
       ),
     );
+  }
+
+  void _showLoadError(Object error) {
+    if (identical(error, _reportedError)) return;
+    _reportedError = error;
+    final message = error is ApiException
+        ? error.userMessage
+        : 'Something went wrong.';
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    });
   }
 
   /// This the main Widget of the page which displays all the contents.
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: locationsFSI
-          .collection(locationCollectionPath)
-          .orderBy('venueName')
-          .snapshots(),
-      builder:
-          (
-            BuildContext context,
-            AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>> snapshot,
-          ) {
-            return theMap(snapshot.data?.docs ?? []);
-          },
+    return FutureBuilder<List<Location>>(
+      future: _locations,
+      builder: (BuildContext context, AsyncSnapshot<List<Location>> snapshot) {
+        final error = snapshot.error;
+        if (error != null) _showLoadError(error);
+        return theMap(snapshot.data ?? const <Location>[]);
+      },
     );
   }
 }

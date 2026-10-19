@@ -1,27 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../api/models.dart';
 import './details_cover.dart';
 import './details_info.dart';
 
 class DetailsPage extends StatefulWidget {
-  final String imagePath;
-  final String venueName;
-  final String venueLocation;
-  final String description;
-  final int numberStories;
-  final String locationID;
-  // final List<dynamic> storyList;
+  final Location location;
 
-  //Recieving Datas
-  DetailsPage({
-    super.key,
-    required this.imagePath,
-    required this.venueName,
-    required this.venueLocation,
-    required this.description,
-    required this.numberStories,
-    required this.locationID,
-  });
+  const DetailsPage({super.key, required this.location});
 
   @override
   State<StatefulWidget> createState() {
@@ -101,15 +87,10 @@ class _DetailsPageState extends State<DetailsPage> {
             scrollDirection: Axis.vertical,
             physics: BouncingScrollPhysics(),
             children: <Widget>[
-              DetailsCover(
-                imagePath: widget.imagePath,
-                venueName: widget.venueName,
-                venueLocation: widget.venueLocation,
-                numberStories: widget.numberStories,
-              ),
+              DetailsCover(location: widget.location),
               DetailsInfo(
-                description: widget.description,
-                locationID: widget.locationID,
+                description: widget.location.description,
+                locationID: widget.location.id,
               ),
             ],
           ),

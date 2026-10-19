@@ -1,15 +1,15 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:logger/logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../api/models.dart';
+
 var logger = Logger();
 
-/// Coordinates of a `locations` document.
-LatLng locationLatLng(DocumentSnapshot<Map<String, dynamic>> doc) =>
-    LatLng((doc['latN'] as num).toDouble(), (doc['longE'] as num).toDouble());
+/// Coordinates of a [Location].
+LatLng locationLatLng(Location l) => LatLng(l.lat, l.lng);
 
 /// Animates the Camera Position to desired Location.
 void moveToLocation({
@@ -20,29 +20,27 @@ void moveToLocation({
   mapController.move(latLng, zoom);
 }
 
-/// Add Items Name in DropDownMenu from FireStore. Value is the location doc id.
-List<DropdownMenuItem<String>> buildDDMenuItems(
-  List<DocumentSnapshot<Map<String, dynamic>>> snaps,
-) {
+/// Items for the location dropdown. The value is the location id.
+List<DropdownMenuItem<String>> buildDDMenuItems(List<Location> locations) {
   return [
-    for (final doc in snaps)
-      DropdownMenuItem<String>(value: doc.id, child: Text(doc['venueName'])),
+    for (final l in locations)
+      DropdownMenuItem<String>(value: l.id, child: Text(l.venueName)),
   ];
 }
 
-/// Build Markers on the Map retrieved from FireStore.
+/// One marker per location on the map.
 List<Marker> buildMarkers(
-  List<DocumentSnapshot<Map<String, dynamic>>> snaps,
-  void Function(DocumentSnapshot<Map<String, dynamic>> doc) onTap,
+  List<Location> locations,
+  void Function(Location location) onTap,
 ) {
   return [
-    for (final doc in snaps)
+    for (final l in locations)
       Marker(
-        point: locationLatLng(doc),
+        point: locationLatLng(l),
         width: 20,
         height: 20,
         child: GestureDetector(
-          onTap: () => onTap(doc),
+          onTap: () => onTap(l),
           child: Container(
             decoration: BoxDecoration(
               color: const Color(0xffd3d3d3),

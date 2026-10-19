@@ -1,25 +1,16 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:exploreapp/utils.dart';
 import 'package:flutter/material.dart';
+import 'package:memopin/api/models.dart';
+import 'package:memopin/components/net_image.dart';
+import 'package:memopin/utils.dart';
 
 class StoryPage extends StatelessWidget {
-  final String storyImage;
-  final String storyTitle;
-  final Timestamp storyTime;
-  final String storyType;
-  final String storyDescription;
+  final Story story;
 
-  StoryPage({
-    super.key,
-    required this.storyImage,
-    required this.storyTitle,
-    required this.storyTime,
-    required this.storyType,
-    required this.storyDescription,
-  });
+  const StoryPage({super.key, required this.story});
 
   @override
   Widget build(BuildContext context) {
+    final image = imageOrNull(story.imageUrl);
     return Scaffold(
       body: Column(
         children: <Widget>[
@@ -46,7 +37,7 @@ class StoryPage extends StatelessWidget {
                 SizedBox(height: 20),
                 Text(
                   //Story Title
-                  storyTitle,
+                  story.title,
                   textAlign: TextAlign.left,
                   maxLines: 2,
                   style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
@@ -54,9 +45,9 @@ class StoryPage extends StatelessWidget {
                 SizedBox(height: 10),
                 Text(
                   //Story Type & Time
-                  getFormattedTimeDistanceToCurrent(storyTime) +
+                  getFormattedTimeDistanceToCurrent(story.createdAt) +
                       '  .  ' +
-                      storyType,
+                      story.type,
                   textAlign: TextAlign.left,
                   style: TextStyle(
                     fontFamily: 'OpenSans',
@@ -67,15 +58,14 @@ class StoryPage extends StatelessWidget {
                 ),
                 SizedBox(height: 20),
                 Hero(
-                  tag: 'HeroTag ' + storyTitle,
+                  tag: 'HeroTag ' + story.id,
                   child: Container(
                     height: 200,
                     decoration: BoxDecoration(
                       color: Colors.grey[300],
-                      image: DecorationImage(
-                        image: NetworkImage(storyImage),
-                        fit: BoxFit.cover,
-                      ),
+                      image: image == null
+                          ? null
+                          : DecorationImage(image: image, fit: BoxFit.cover),
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),
@@ -83,7 +73,7 @@ class StoryPage extends StatelessWidget {
                 SizedBox(height: 20),
                 Text(
                   //Description of the venue, fetched from json.
-                  storyDescription,
+                  story.description,
                   textAlign: TextAlign.left,
                   style: TextStyle(
                     fontSize: 17,
