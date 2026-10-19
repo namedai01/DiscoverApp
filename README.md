@@ -4,14 +4,31 @@ Monorepo for Memopin.
 
 ```
 apps/
-  mobile/        Flutter app (package `memopin`)
-  web/           Next.js web client
-backend/         Go API (Postgres, Firebase Auth, FCM)
+  mobile/        Flutter app (package `memopin`, Android id `com.memopin.app`)
+  web/           Next.js 16 web client (TypeScript, Tailwind, pnpm)
+backend/         Go API (Postgres + PostGIS, Firebase Auth, FCM)
+packages/
+  wemapgl/       Vendored legacy WeMap SDK, reference only (the app does not use it)
+docs/
+  setup/         Firebase / GCP setup and Cloud Run deploy
+  superpowers/   Platform design spec and implementation plans
 ```
+
+Each project is self-contained: run its commands from inside its own directory.
+
+## Requirements
+
+| Project | Needs |
+| --- | --- |
+| `backend/` | Go 1.24 (`GOTOOLCHAIN=local`), Docker |
+| `apps/mobile/` | Flutter 3.47+ (Dart 3.13+), Android SDK (minSdk 23) or Xcode |
+| `apps/web/` | Node 24+, pnpm |
+
+Local development needs no Firebase project: the backend and the web client both have a dev-only fake auth mode. The mobile app always uses real Firebase.
 
 ## Features
 
-Memopin lets users browse places, post photo stories tied to a place, follow other users, and see places on a map. Data lives behind the Go API in `backend/` (Postgres); Firebase provides phone sign-in, photo storage and push (Auth, Storage, Cloud Messaging). The app has 5 tabs: Explore, People, Maps, Create Story, My Profile.
+Memopin lets users browse places, post photo stories tied to a place, follow other users, and see places on a map. Data lives behind the Go API in `backend/` (Postgres); Firebase provides phone sign-in, photo storage and push (Auth, Storage, Cloud Messaging). There is no Firestore. The mobile app has 5 tabs: Explore, People, Maps, Create Story, My Profile; the web client covers the same features except push.
 
 ### Explore places
 
@@ -87,4 +104,18 @@ pnpm install
 pnpm dev      # http://localhost:3000, expects the backend on :8080
 ```
 
-Next.js client for browsing places, posting stories, following people and the map. For development, run the backend with `AUTH_MODE=fake` and use the fake sign-in. See `apps/web/README.md` for the environment variables, commands, `pnpm e2e` and what a deploy needs.
+Next.js client for browsing places, posting stories, following people and the map. Routes: `/` (places), `/places/[id]` (server-rendered, with Open Graph metadata), `/people`, `/u/[id]`, `/map`, `/post`, `/me`, `/signin`. For development, run the backend with `AUTH_MODE=fake` and use the fake sign-in. See `apps/web/README.md` for the environment variables, commands, `pnpm e2e` and what a deploy needs.
+
+## Docs
+
+- `docs/setup/firebase-gcp.md`: create the Firebase project, phone auth, Storage, FCM, Postgres and the Cloud Run deploy.
+- `docs/superpowers/specs/2026-10-17-platform-design.md`: platform design (Go backend, Postgres, web client).
+- `docs/superpowers/plans/`: implementation plans for the backend, the mobile API migration and the web client.
+- `CLAUDE.md`: architecture notes and gotchas for each project.
+
+## Status
+
+- Backend, mobile and web are implemented and tested locally; nothing is deployed yet and there is no CI.
+- The Android build fails until `flutterfire configure` is run against the Memopin Firebase project: the committed `android/app/google-services.json` is from the old project. iOS has no `GoogleService-Info.plist` in the repo.
+- Public OpenStreetMap tiles are for development only; set `MAP_TILE_URL` (mobile) and `NEXT_PUBLIC_MAP_TILE_URL` (web) to a hosted provider before release.
+- Web hosting is not chosen yet.
