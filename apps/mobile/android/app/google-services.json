@@ -1,36 +1,26 @@
 {
   "project_info": {
-    "project_number": "226576661109",
-    "project_id": "exploreapp-eda90",
-    "storage_bucket": "exploreapp-eda90.appspot.com"
+    "project_number": "19484643780",
+    "project_id": "memopin-a1f31",
+    "storage_bucket": "memopin-a1f31.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:226576661109:android:8ba524293711820725963c",
+        "mobilesdk_app_id": "1:19484643780:android:f1e5d8fffa1d7ca2cc1491",
         "android_client_info": {
-          "package_name": "com.example.exploreapp"
+          "package_name": "com.memopin.app"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "226576661109-mugj5lcoaeaafmutf7t5ge1tohnfp24n.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyABJOeFr-qXwb4_pZGiYrl1t8dJB5akgfo"
+          "current_key": "AIzaSyCvPudRqD1MdkbYf_DKy-rPSZywWx7-bZE"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "226576661109-mugj5lcoaeaafmutf7t5ge1tohnfp24n.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }
